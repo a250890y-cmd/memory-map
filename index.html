@@ -31,13 +31,13 @@
       .sidebar {
         width: 320px;
         height: 100%;
-        background: rgba(255, 255, 255, 0.92);
+        background: rgba(255, 255, 255, 0.94);
         backdrop-filter: blur(12px);
         border-right: 1px solid rgba(0, 0, 0, 0.08);
         display: flex;
         flex-direction: column;
         z-index: 1000;
-        transition: transform 0.3s ease;
+        box-shadow: 2px 0 12px rgba(0, 0, 0, 0.04);
       }
       /* 地図メイン領域 */
       .map-container {
@@ -50,59 +50,41 @@
         height: 100%;
         background: #e2e8f0;
       }
-      /* 初期プレースホルダー表示 */
-      .init-notice {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        text-align: center;
-        background: white;
-        padding: 24px 32px;
-        border-radius: 16px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-        border: 1px solid rgba(0,0,0,0.06);
-        z-index: 500;
+      /* Leaflet ポップアップのカスタマイズ */
+      .custom-memory-popup .leaflet-popup-content-wrapper {
+        border-radius: 14px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        padding: 4px;
       }
-      .init-notice h1 {
-        font-size: 1.25rem;
-        margin-bottom: 8px;
-        color: #2563eb;
-      }
-      .init-notice p {
-        font-size: 0.88rem;
-        color: #64748b;
+      .custom-memory-popup .leaflet-popup-content {
+        margin: 10px 12px;
       }
     </style>
   </head>
   <body>
     <div id="app">
-      <!-- サイドバー（アルバム一覧・検索・フィルター） -->
+      <!-- サイドバー -->
       <aside id="sidebar" class="sidebar">
         <header class="sidebar-header" style="padding: 1.2rem; border-bottom: 1px solid rgba(0,0,0,0.06);">
-          <h2 style="font-size: 1.1rem; font-weight: 700; color: #0f172a;">Memory Map</h2>
+          <h2 style="font-size: 1.15rem; font-weight: 700; color: #0f172a;">Memory Map</h2>
         </header>
         <section id="sidebar-content" class="sidebar-content" style="flex: 1; padding: 1.2rem; overflow-y: auto;">
-          <!-- アルバムやタグ等のUIが今後のステップで配置されます -->
+          <div style="font-size: 0.85rem; color: #64748b; line-height: 1.6;">
+            <p>地図上のピンをクリックすると、思い出の写真やタイトルを確認できます。</p>
+          </div>
         </section>
       </aside>
 
-      <!-- メイン地図領域 -->
+      <!-- メイン地図領域（画面いっぱいに描画） -->
       <main class="map-container">
         <div id="map"></div>
-        <div id="init-placeholder" class="init-notice">
-          <h1>Memory Map 基盤準備完了</h1>
-          <p>Step 1 の環境整備が完了しました。今後のステップで地図とデータモジュールが接続されます。</p>
-        </div>
       </main>
     </div>
 
     <!-- モーダル用ポータルコンテナ -->
     <div id="modal-container"></div>
 
-    <!-- 今後のステップでモジュール化された main.js をマウントします -->
-    <script type="module">
-      console.log("Memory Map base system initialized successfully.");
-    </script>
+    <!-- メインエントリーポイントの読み込み -->
+    <script type="module" src="./src/main.js"></script>
   </body>
 </html>
