@@ -130,7 +130,13 @@ onmessage = (message) => {
           </div>
 
           <div id="photo-add-more-wrapper" class="photo-add-more-row hidden">
-            <button type="button" id="btn-add-more-photos" class="btn-text-action">+ 写真を追加する</button>
+            <button type="button" id="btn-add-more-photos" class="btn-text-action" style="display: inline-flex; align-items: center; gap: 4px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>写真を追加する</span>
+            </button>
           </div>
 
           <div id="exif-success-badge" class="exif-badge hidden">
@@ -194,8 +200,21 @@ onmessage = (message) => {
     </div>
   `),zr(),Ur())}function zr(){mr=document.getElementById(`memory-modal`),hr=document.getElementById(`modal-title`),gr=document.getElementById(`memory-lat`),_r=document.getElementById(`memory-lng`),vr=document.getElementById(`input-memory-title`),yr=document.getElementById(`input-memory-datetime`),br=document.getElementById(`input-memory-album`),xr=document.getElementById(`input-memory-diary`),Sr=document.getElementById(`input-memory-tag`),Cr=document.getElementById(`tags-chips-wrapper`),wr=document.getElementById(`photo-dropzone`),Tr=document.getElementById(`photo-file-input`),Er=document.getElementById(`dropzone-placeholder`),Dr=document.getElementById(`photo-preview-grid`),Or=document.getElementById(`photo-add-more-wrapper`),kr=document.getElementById(`btn-add-more-photos`),Ar=document.getElementById(`exif-success-badge`),jr=document.getElementById(`exif-badge-text`),Mr=document.getElementById(`delete-action-row`),Nr=document.getElementById(`btn-delete-memory`),Pr=document.getElementById(`btn-modal-cancel`),Fr=document.getElementById(`btn-modal-save`),Ir=document.getElementById(`btn-modal-close`)}function Br(){Dr.innerHTML=``,fr.length===0?(Dr.classList.add(`hidden`),Er.classList.remove(`hidden`),Or.classList.add(`hidden`)):(Dr.classList.remove(`hidden`),Er.classList.add(`hidden`),Or.classList.remove(`hidden`),fr.forEach((e,t)=>{let n=document.createElement(`div`);n.className=`preview-thumb-card`,n.innerHTML=`
         <img src="${e}" alt="選択写真 ${t+1}" />
-        <button type="button" class="btn-thumb-remove" title="写真を削除">✕</button>
-      `,n.querySelector(`.btn-thumb-remove`).addEventListener(`click`,e=>{e.stopPropagation(),fr.splice(t,1),Br()}),Dr.appendChild(n)}))}function Vr(){Cr.innerHTML=``,pr.forEach((e,t)=>{let n=document.createElement(`span`);n.className=`tag-chip`,n.innerHTML=`#${e} <span class="tag-chip-remove" title="削除">✕</span>`,n.querySelector(`.tag-chip-remove`).addEventListener(`click`,e=>{e.stopPropagation(),pr.splice(t,1),Vr()}),Cr.appendChild(n)})}async function Hr(e){if(!e||e.length===0)return;let t=!1;for(let n=0;n<e.length;n++){let r=e[n];try{let e=await sr(r);fr.push(e.imageUrl),e.lat!=null&&e.lng!=null&&!t&&(ur=e.lat,dr=e.lng,gr.value=e.lat,_r.value=e.lng,t=!0),e.datetime&&(!yr.value||t)&&(yr.value=Lr(e.datetime))}catch(e){console.error(`写真処理エラー:`,e)}}t&&(Ar.classList.remove(`hidden`),jr&&(jr.textContent=`写真から位置情報(${ur.toFixed(4)}, ${dr.toFixed(4)})と撮影日時を自動反映しました`)),Br()}function Ur(){wr.addEventListener(`click`,e=>{e.target.closest(`.btn-thumb-remove`)||Tr.click()}),kr&&kr.addEventListener(`click`,()=>Tr.click()),Tr.addEventListener(`change`,async e=>{await Hr(e.target.files),Tr.value=``}),[`dragenter`,`dragover`].forEach(e=>{wr.addEventListener(e,e=>{e.preventDefault(),wr.classList.add(`dragover`)})}),[`dragleave`,`drop`].forEach(e=>{wr.addEventListener(e,e=>{e.preventDefault(),wr.classList.remove(`dragover`)})}),wr.addEventListener(`drop`,async e=>{e.dataTransfer&&e.dataTransfer.files&&await Hr(e.dataTransfer.files)}),Sr.addEventListener(`keydown`,e=>{if(!e.isComposing&&(e.key===`Enter`||e.key===` `||e.key===`　`||e.key===`,`)){e.preventDefault();let t=Sr.value.trim().replace(/^#|,/g,``);t&&!pr.includes(t)&&(pr.push(t),Vr()),Sr.value=``}}),Ir.addEventListener(`click`,Kr),Pr.addEventListener(`click`,Kr),Fr.addEventListener(`click`,Wr),Nr.addEventListener(`click`,Gr),mr.addEventListener(`click`,e=>{e.target===mr&&Kr()});let e=document.getElementById(`btn-record-memory`);e&&e.addEventListener(`click`,()=>{qr()})}async function Wr(){let e=vr.value.trim();if(!e&&fr.length===0){alert(`写真を選択するか、タイトルを入力してください。`);return}let t=Sr.value.trim().replace(/^#|,/g,``);t&&!pr.includes(t)&&(pr.push(t),Sr.value=``);let n=ur??(parseFloat(gr.value)||null),r=dr??(parseFloat(_r.value)||null);if((n==null||r==null)&&typeof cr.getFallbackLocation==`function`){let e=cr.getFallbackLocation();e&&typeof e.lat==`number`&&typeof e.lng==`number`&&(n=e.lat,r=e.lng)}(n==null||r==null)&&(n=36.2048,r=138.2529);let i={title:e,diary:xr.value.trim(),album:br.value.trim(),datetime:yr.value?new Date(yr.value).toISOString():null,tags:pr,imageUrls:fr,lat:n,lng:r};try{lr?(i.id=lr,await Be(i)):i.id=await Le(i),Kr(),typeof cr.onSave==`function`&&cr.onSave(i)}catch(e){console.error(`思い出の保存に失敗しました:`,e),alert(`保存に失敗しました: `+e.message)}}async function Gr(){if(lr&&confirm(`この思い出を削除してもよろしいですか？`))try{await Ve(lr),Kr(),typeof cr.onDelete==`function`&&cr.onDelete(lr)}catch(e){console.error(`削除失敗:`,e),alert(`削除に失敗しました: `+e.message)}}function Kr(){mr&&mr.classList.add(`hidden`)}function qr(e=null){Rr(),lr=null,fr=[],pr=[],hr.textContent=`思い出を記録`,Mr.classList.add(`hidden`),Ar.classList.add(`hidden`),vr.value=``,xr.value=``,br.value=``,yr.value=Lr(new Date),Sr.value=``,e&&typeof e.lat==`number`&&typeof e.lng==`number`?(ur=e.lat,dr=e.lng,gr.value=e.lat,_r.value=e.lng):(ur=null,dr=null,gr.value=``,_r.value=``),Br(),Vr(),mr.classList.remove(`hidden`),vr.focus()}function Jr(e){e&&(Rr(),lr=e.id,ur=e.lat,dr=e.lng,fr=Array.isArray(e.imageUrls)?[...e.imageUrls]:[],pr=Array.isArray(e.tags)?[...e.tags]:[],hr.textContent=`思い出を編集`,Mr.classList.remove(`hidden`),Ar.classList.add(`hidden`),gr.value=e.lat||``,_r.value=e.lng||``,vr.value=e.title||``,xr.value=e.diary||``,br.value=e.album||``,yr.value=Lr(e.datetime||e.timestamp),Sr.value=``,Br(),Vr(),mr.classList.remove(`hidden`))}function Yr(e={}){cr={...cr,...e},Rr()}var Xr=null,Zr=[],k={searchQuery:``,selectedYear:``,selectedAlbum:``,selectedTag:``},Qr={onFilterChange:null,onAlbumSelect:null};function $r(){let e=[...Zr];if(k.searchQuery){let t=k.searchQuery.toLowerCase();e=e.filter(e=>{let n=(e.title||``).toLowerCase().includes(t),r=(e.diary||``).toLowerCase().includes(t),i=(e.album||``).toLowerCase().includes(t),a=Array.isArray(e.tags)&&e.tags.some(e=>e.toLowerCase().includes(t));return n||r||i||a})}k.selectedYear&&(e=e.filter(e=>{let t=e.datetime||e.timestamp;if(!t)return!1;let n=new Date(t);return!isNaN(n.getTime())&&String(n.getFullYear())===k.selectedYear})),k.selectedAlbum&&(e=e.filter(e=>(e.album||``)===k.selectedAlbum)),k.selectedTag&&(e=e.filter(e=>Array.isArray(e.tags)&&e.tags.includes(k.selectedTag))),typeof Qr.onFilterChange==`function`&&Qr.onFilterChange(e,k)}function ei(){if(!Xr)return;let e=new Set;Zr.forEach(t=>{let n=t.datetime||t.timestamp;if(n){let t=new Date(n);isNaN(t.getTime())||e.add(String(t.getFullYear()))}});let t=[...e].sort((e,t)=>Number(t)-Number(e)),n={};Zr.forEach(e=>{let t=(e.album||``).trim();t&&(n[t]||(n[t]={name:t,count:0,coverUrl:null,memories:[]}),n[t].count+=1,n[t].memories.push(e),!n[t].coverUrl&&Array.isArray(e.imageUrls)&&e.imageUrls.length>0&&(n[t].coverUrl=e.imageUrls[0]))});let r=Object.values(n),i={};Zr.forEach(e=>{Array.isArray(e.tags)&&e.tags.forEach(e=>{let t=e.trim();t&&(i[t]=(i[t]||0)+1)})});let a=Object.entries(i).sort((e,t)=>t[1]-e[1]).map(([e,t])=>({tag:e,count:t}));Xr.innerHTML=`
+        <button type="button" class="btn-thumb-remove" title="写真を削除" style="display: flex; align-items: center; justify-content: center;">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      `,n.querySelector(`.btn-thumb-remove`).addEventListener(`click`,e=>{e.stopPropagation(),fr.splice(t,1),Br()}),Dr.appendChild(n)}))}function Vr(){Cr.innerHTML=``,pr.forEach((e,t)=>{let n=document.createElement(`span`);n.className=`tag-chip`,n.innerHTML=`
+      <span>#${e}</span>
+      <span class="tag-chip-remove" title="削除" style="display: inline-flex; align-items: center; justify-content: center;">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </span>
+    `,n.querySelector(`.tag-chip-remove`).addEventListener(`click`,e=>{e.stopPropagation(),pr.splice(t,1),Vr()}),Cr.appendChild(n)})}async function Hr(e){if(!e||e.length===0)return;let t=!1;for(let n=0;n<e.length;n++){let r=e[n];try{let e=await sr(r);fr.push(e.imageUrl),e.lat!=null&&e.lng!=null&&!t&&(ur=e.lat,dr=e.lng,gr.value=e.lat,_r.value=e.lng,t=!0),e.datetime&&(!yr.value||t)&&(yr.value=Lr(e.datetime))}catch(e){console.error(`写真処理エラー:`,e)}}t&&(Ar.classList.remove(`hidden`),jr&&(jr.textContent=`写真から位置情報(${ur.toFixed(4)}, ${dr.toFixed(4)})と撮影日時を自動反映しました`)),Br()}function Ur(){wr.addEventListener(`click`,e=>{e.target.closest(`.btn-thumb-remove`)||Tr.click()}),kr&&kr.addEventListener(`click`,()=>Tr.click()),Tr.addEventListener(`change`,async e=>{await Hr(e.target.files),Tr.value=``}),[`dragenter`,`dragover`].forEach(e=>{wr.addEventListener(e,e=>{e.preventDefault(),wr.classList.add(`dragover`)})}),[`dragleave`,`drop`].forEach(e=>{wr.addEventListener(e,e=>{e.preventDefault(),wr.classList.remove(`dragover`)})}),wr.addEventListener(`drop`,async e=>{e.dataTransfer&&e.dataTransfer.files&&await Hr(e.dataTransfer.files)}),Sr.addEventListener(`keydown`,e=>{if(!e.isComposing&&(e.key===`Enter`||e.key===` `||e.key===`　`||e.key===`,`)){e.preventDefault();let t=Sr.value.trim().replace(/^#|,/g,``);t&&!pr.includes(t)&&(pr.push(t),Vr()),Sr.value=``}}),Ir.addEventListener(`click`,Kr),Pr.addEventListener(`click`,Kr),Fr.addEventListener(`click`,Wr),Nr.addEventListener(`click`,Gr),mr.addEventListener(`click`,e=>{e.target===mr&&Kr()});let e=document.getElementById(`btn-record-memory`);e&&e.addEventListener(`click`,()=>{qr()})}async function Wr(){let e=vr.value.trim();if(!e&&fr.length===0){alert(`写真を選択するか、タイトルを入力してください。`);return}let t=Sr.value.trim().replace(/^#|,/g,``);t&&!pr.includes(t)&&(pr.push(t),Sr.value=``);let n=ur??(parseFloat(gr.value)||null),r=dr??(parseFloat(_r.value)||null);if((n==null||r==null)&&typeof cr.getFallbackLocation==`function`){let e=cr.getFallbackLocation();e&&typeof e.lat==`number`&&typeof e.lng==`number`&&(n=e.lat,r=e.lng)}(n==null||r==null)&&(n=36.2048,r=138.2529);let i={title:e,diary:xr.value.trim(),album:br.value.trim(),datetime:yr.value?new Date(yr.value).toISOString():null,tags:pr,imageUrls:fr,lat:n,lng:r};try{lr?(i.id=lr,await Be(i)):i.id=await Le(i),Kr(),typeof cr.onSave==`function`&&cr.onSave(i)}catch(e){console.error(`思い出の保存に失敗しました:`,e),alert(`保存に失敗しました: `+e.message)}}async function Gr(){if(lr&&confirm(`この思い出を削除してもよろしいですか？`))try{await Ve(lr),Kr(),typeof cr.onDelete==`function`&&cr.onDelete(lr)}catch(e){console.error(`削除失敗:`,e),alert(`削除に失敗しました: `+e.message)}}function Kr(){mr&&mr.classList.add(`hidden`)}function qr(e=null){Rr(),lr=null,fr=[],pr=[],hr.textContent=`思い出を記録`,Mr.classList.add(`hidden`),Ar.classList.add(`hidden`),vr.value=``,xr.value=``,br.value=``,yr.value=Lr(new Date),Sr.value=``,e&&typeof e.lat==`number`&&typeof e.lng==`number`?(ur=e.lat,dr=e.lng,gr.value=e.lat,_r.value=e.lng):(ur=null,dr=null,gr.value=``,_r.value=``),Br(),Vr(),mr.classList.remove(`hidden`),vr.focus()}function Jr(e){e&&(Rr(),lr=e.id,ur=e.lat,dr=e.lng,fr=Array.isArray(e.imageUrls)?[...e.imageUrls]:[],pr=Array.isArray(e.tags)?[...e.tags]:[],hr.textContent=`思い出を編集`,Mr.classList.remove(`hidden`),Ar.classList.add(`hidden`),gr.value=e.lat||``,_r.value=e.lng||``,vr.value=e.title||``,xr.value=e.diary||``,br.value=e.album||``,yr.value=Lr(e.datetime||e.timestamp),Sr.value=``,Br(),Vr(),mr.classList.remove(`hidden`))}function Yr(e={}){cr={...cr,...e},Rr()}var Xr=null,Zr=[],k={searchQuery:``,selectedYear:``,selectedAlbum:``,selectedTag:``},Qr={onFilterChange:null,onAlbumSelect:null};function $r(){let e=[...Zr];if(k.searchQuery){let t=k.searchQuery.toLowerCase();e=e.filter(e=>{let n=(e.title||``).toLowerCase().includes(t),r=(e.diary||``).toLowerCase().includes(t),i=(e.album||``).toLowerCase().includes(t),a=Array.isArray(e.tags)&&e.tags.some(e=>e.toLowerCase().includes(t));return n||r||i||a})}k.selectedYear&&(e=e.filter(e=>{let t=e.datetime||e.timestamp;if(!t)return!1;let n=new Date(t);return!isNaN(n.getTime())&&String(n.getFullYear())===k.selectedYear})),k.selectedAlbum&&(e=e.filter(e=>(e.album||``)===k.selectedAlbum)),k.selectedTag&&(e=e.filter(e=>Array.isArray(e.tags)&&e.tags.includes(k.selectedTag))),typeof Qr.onFilterChange==`function`&&Qr.onFilterChange(e,k)}function ei(){if(!Xr)return;let e=new Set;Zr.forEach(t=>{let n=t.datetime||t.timestamp;if(n){let t=new Date(n);isNaN(t.getTime())||e.add(String(t.getFullYear()))}});let t=[...e].sort((e,t)=>Number(t)-Number(e)),n={};Zr.forEach(e=>{let t=(e.album||``).trim();t&&(n[t]||(n[t]={name:t,count:0,coverUrl:null,memories:[]}),n[t].count+=1,n[t].memories.push(e),!n[t].coverUrl&&Array.isArray(e.imageUrls)&&e.imageUrls.length>0&&(n[t].coverUrl=e.imageUrls[0]))});let r=Object.values(n),i={};Zr.forEach(e=>{Array.isArray(e.tags)&&e.tags.forEach(e=>{let t=e.trim();t&&(i[t]=(i[t]||0)+1)})});let a=Object.entries(i).sort((e,t)=>t[1]-e[1]).map(([e,t])=>({tag:e,count:t}));Xr.innerHTML=`
     <!-- 検索バー -->
     <div class="sidebar-search-box">
       <svg class="sidebar-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -203,7 +222,14 @@ onmessage = (message) => {
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
       <input type="text" id="sidebar-search-input" class="sidebar-search-input" placeholder="思い出、場所、タグを検索..." value="${k.searchQuery}" />
-      ${k.searchQuery?`<button id="btn-clear-search" class="btn-clear-search" title="検索クリア">✕</button>`:``}
+      ${k.searchQuery?`
+        <button id="btn-clear-search" class="btn-clear-search" title="検索クリア" style="display: flex; align-items: center; justify-content: center;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      `:``}
     </div>
 
     <!-- 年別フィルター -->
@@ -230,7 +256,11 @@ onmessage = (message) => {
       </div>
       <div class="sidebar-album-list">
         <div class="sidebar-album-item ${k.selectedAlbum===``?`active`:``}" data-album="">
-          <div class="album-thumb-icon">📁</div>
+          <div class="album-thumb-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </div>
           <div class="album-item-info">
             <div class="album-item-title">すべてのアルバム</div>
             <div class="album-item-count">${Zr.length} 件の思い出</div>
@@ -238,7 +268,11 @@ onmessage = (message) => {
         </div>
         ${r.map(e=>`
           <div class="sidebar-album-item ${k.selectedAlbum===e.name?`active`:``}" data-album="${e.name}">
-            ${e.coverUrl?`<img src="${e.coverUrl}" alt="${e.name}" class="album-thumb-img" />`:`<div class="album-thumb-icon">📂</div>`}
+            ${e.coverUrl?`<img src="${e.coverUrl}" alt="${e.name}" class="album-thumb-img" />`:`<div class="album-thumb-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                </div>`}
             <div class="album-item-info">
               <div class="album-item-title">${e.name}</div>
               <div class="album-item-count">${e.count} 件</div>
@@ -738,7 +772,10 @@ onmessage = (message) => {
     <div id="photobook-modal-overlay" class="photobook-modal-overlay hidden">
       <div class="photobook-toolbar">
         <div class="photobook-toolbar-title">
-          <span>📖</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
           <span id="photobook-toolbar-album-name">旅のフォトブック プレビュー</span>
         </div>
         <div class="photobook-toolbar-actions">
@@ -750,7 +787,12 @@ onmessage = (message) => {
             </svg>
             <span>PDF保存 / 印刷</span>
           </button>
-          <button id="btn-close-photobook" class="btn-close-photobook" title="閉じる">✕</button>
+          <button id="btn-close-photobook" class="btn-close-photobook" title="閉じる" style="display: flex; align-items: center; justify-content: center;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </div>
       </div>
       <div id="photobook-content-container" class="photobook-container"></div>
@@ -784,7 +826,13 @@ onmessage = (message) => {
         <div>
           <div class="photobook-spot-header">
             <span class="photobook-badge">SPOT ${i} / ${n.length}</span>
-            <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">${a}</span>
+            <span style="font-size: 0.85rem; color: #64748b; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span>${a}</span>
+            </span>
           </div>
 
           <h2 class="photobook-spot-title">${t.title||`無題の思い出`}</h2>

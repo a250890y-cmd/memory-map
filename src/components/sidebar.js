@@ -127,7 +127,14 @@ function renderSidebarUI() {
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
       <input type="text" id="sidebar-search-input" class="sidebar-search-input" placeholder="思い出、場所、タグを検索..." value="${filterState.searchQuery}" />
-      ${filterState.searchQuery ? '<button id="btn-clear-search" class="btn-clear-search" title="検索クリア">✕</button>' : ''}
+      ${filterState.searchQuery ? `
+        <button id="btn-clear-search" class="btn-clear-search" title="検索クリア" style="display: flex; align-items: center; justify-content: center;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      ` : ''}
     </div>
 
     <!-- 年別フィルター -->
@@ -154,7 +161,11 @@ function renderSidebarUI() {
       </div>
       <div class="sidebar-album-list">
         <div class="sidebar-album-item ${filterState.selectedAlbum === '' ? 'active' : ''}" data-album="">
-          <div class="album-thumb-icon">📁</div>
+          <div class="album-thumb-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </div>
           <div class="album-item-info">
             <div class="album-item-title">すべてのアルバム</div>
             <div class="album-item-count">${memoriesData.length} 件の思い出</div>
@@ -164,7 +175,11 @@ function renderSidebarUI() {
           <div class="sidebar-album-item ${filterState.selectedAlbum === a.name ? 'active' : ''}" data-album="${a.name}">
             ${a.coverUrl
               ? `<img src="${a.coverUrl}" alt="${a.name}" class="album-thumb-img" />`
-              : `<div class="album-thumb-icon">📂</div>`
+              : `<div class="album-thumb-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                </div>`
             }
             <div class="album-item-info">
               <div class="album-item-title">${a.name}</div>

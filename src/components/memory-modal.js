@@ -101,7 +101,13 @@ function createModalDOM() {
           </div>
 
           <div id="photo-add-more-wrapper" class="photo-add-more-row hidden">
-            <button type="button" id="btn-add-more-photos" class="btn-text-action">+ 写真を追加する</button>
+            <button type="button" id="btn-add-more-photos" class="btn-text-action" style="display: inline-flex; align-items: center; gap: 4px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>写真を追加する</span>
+            </button>
           </div>
 
           <div id="exif-success-badge" class="exif-badge hidden">
@@ -223,7 +229,12 @@ function renderPhotoPreviews() {
       card.className = 'preview-thumb-card';
       card.innerHTML = `
         <img src="${url}" alt="選択写真 ${idx + 1}" />
-        <button type="button" class="btn-thumb-remove" title="写真を削除">✕</button>
+        <button type="button" class="btn-thumb-remove" title="写真を削除" style="display: flex; align-items: center; justify-content: center;">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       `;
       card.querySelector('.btn-thumb-remove').addEventListener('click', (e) => {
         e.stopPropagation();
@@ -243,7 +254,15 @@ function renderTagChips() {
   currentTags.forEach((tag, idx) => {
     const chip = document.createElement('span');
     chip.className = 'tag-chip';
-    chip.innerHTML = `#${tag} <span class="tag-chip-remove" title="削除">✕</span>`;
+    chip.innerHTML = `
+      <span>#${tag}</span>
+      <span class="tag-chip-remove" title="削除" style="display: inline-flex; align-items: center; justify-content: center;">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </span>
+    `;
     chip.querySelector('.tag-chip-remove').addEventListener('click', (e) => {
       e.stopPropagation();
       currentTags.splice(idx, 1);
@@ -384,7 +403,7 @@ async function handleSave() {
     tagBareInput.value = '';
   }
 
-  // 位置情報の確定（写真EXIF ➔ フォーム値 ➔ 地図フォールバック）
+  // 位置情報の確定（写真EXIF -> フォーム値 -> 地図フォールバック）
   let lat = currentLat != null ? currentLat : (parseFloat(latInput.value) || null);
   let lng = currentLng != null ? currentLng : (parseFloat(lngInput.value) || null);
 

@@ -263,7 +263,10 @@ function createPhotobookDOM() {
     <div id="photobook-modal-overlay" class="photobook-modal-overlay hidden">
       <div class="photobook-toolbar">
         <div class="photobook-toolbar-title">
-          <span>📖</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
           <span id="photobook-toolbar-album-name">旅のフォトブック プレビュー</span>
         </div>
         <div class="photobook-toolbar-actions">
@@ -275,7 +278,12 @@ function createPhotobookDOM() {
             </svg>
             <span>PDF保存 / 印刷</span>
           </button>
-          <button id="btn-close-photobook" class="btn-close-photobook" title="閉じる">✕</button>
+          <button id="btn-close-photobook" class="btn-close-photobook" title="閉じる" style="display: flex; align-items: center; justify-content: center;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </div>
       </div>
       <div id="photobook-content-container" class="photobook-container"></div>
@@ -382,7 +390,13 @@ function generatePhotobookHTML(albumName, memories) {
         <div>
           <div class="photobook-spot-header">
             <span class="photobook-badge">SPOT ${spotNum} / ${sorted.length}</span>
-            <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">${spotDate}</span>
+            <span style="font-size: 0.85rem; color: #64748b; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span>${spotDate}</span>
+            </span>
           </div>
 
           <h2 class="photobook-spot-title">${m.title || '無題の思い出'}</h2>
