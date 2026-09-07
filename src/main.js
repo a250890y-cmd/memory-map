@@ -1,15 +1,18 @@
 /**
  * Memory Map - メインエントリーポイント
- * アプリのブートストラップ、スタイル読み込み、および初期データのロードと地図描画を行います。
+ * アプリのブートストラップ、スタイル読み込み、初期データシード、
+ * 地図描画、および思い出記録モーダルの連携を行います。
  */
 
-// Leaflet & MarkerCluster の CSS インポート
+// スタイルのインポート
+import './style.css';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
-import { initMap, renderMarkers, flyToLocation } from './map/map-manager';
+import { initMap, renderMarkers, flyToLocation, getMap } from './map/map-manager';
 import { getAllMemories, saveMemory } from './services/storage';
+import { initMemoryModal, openCreateModal, openEditModal } from './components/memory-modal';
 
 /**
  * 初回起動時、データが空であれば動作確認用のサンプルデータを投入する
@@ -42,12 +45,20 @@ async function loadOrSeedMemories() {
 }
 
 /**
+ * 最新の思い出一覧を取得し、地図上のピンを再描画する
+ */
+async function refreshMarkers() {
+  const memories = await getAllMemories();
+  renderMarkers(memories);
+}
+
+/**
  * アプリケーションの初期化
  */
 async function bootstrap() {
   try {
     // 1. 地図の初期化
-    initMap('map');
+    const map = initMap('map');
 
     // 2. データの取得または初期シード
     const memories = await loadOrSeedMemories();
@@ -59,6 +70,45 @@ async function bootstrap() {
     if (memories.length > 0 && memories[0].lat && memories[0].lng) {
       flyToLocation(memories[0].lat, memories[0].lng, 10);
     }
+
+    // 5. 思い出記録モーダルの初期化とコールバック接続
+    initMemoryModal({
+      getFallbackLocation: () => {
+        const center = map.getCenter();
+        return { lat: center.lat, lng: center.lng };
+      },
+      onSave: async (savedMemory) => {
+        await refreshMarkers();
+        if (savedMemory && savedMemory.lat && savedMemory.lng) {
+          flyToLocation(savedMemory.lat, savedMemory.lng, 14);
+        }
+      },
+      onDelete: async () => {
+        await refreshMarkers();
+      }
+    });
+
+    // 6. 地図上をクリックしたときに、その地点を初期位置として記録モーダルを開く
+    map.on('click', (e) => {
+      openCreateModal({
+        lat: e.latlng.lat,
+        lng: e.latlng.lng
+      });
+    });
+
+    // 7. ポップアップ内のダブルクリックや要素操作で編集モーダルを開けるよう委譲サポート
+    document.addEventListener('dblclick', async (e) => {
+      const popup = e.target.closest('.memory-popup-content');
+      if (popup) {
+        const titleEl = popup.querySelector('h4');
+        const titleText = titleEl ? titleEl.textContent : '';
+        const all = await getAllMemories();
+        const found = all.find(m => m.title === titleText);
+        if (found) {
+          openEditModal(found);
+        }
+      }
+    });
 
     console.log(`Memory Map 初期化完了: ${memories.length} 件の思い出を読み込みました。`);
   } catch (error) {
