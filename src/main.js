@@ -11,7 +11,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
-import { initMap, renderMarkers, flyToLocation, getMap } from './map/map-manager';
+import { initMap, renderMarkers, flyToLocation, getMap, drawRouteLine, clearRouteLine } from './map/map-manager';
 import { getAllMemories, saveMemory } from './services/storage';
 import { initMemoryModal, openCreateModal, openEditModal } from './components/memory-modal';
 import { initSidebar, updateSidebar, getFilterState } from './components/sidebar';
@@ -66,6 +66,13 @@ async function refreshAllData() {
   currentFilteredMemories = memories;
   renderMarkers(memories);
   updateSidebar(memories);
+  const filterState = getFilterState();
+  if (filterState && filterState.selectedAlbum) {
+    const albumMems = memories.filter(m => m.album === filterState.selectedAlbum);
+    drawRouteLine(albumMems);
+  } else {
+    clearRouteLine();
+  }
   return memories;
 }
 
@@ -78,11 +85,13 @@ function setupHeaderActions(map) {
 
   const actionsHtml = `
     <div id="sidebar-quick-actions" style="display: flex; gap: 8px; margin-top: 10px;">
-      <button id="btn-quick-tour" style="flex: 1; padding: 7px 10px; background: #2563eb; color: white; border: none; border-radius: 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 8px rgba(37,99,235,0.25); transition: all 0.2s;">
-        ▶ ツアー再生
+      <button id="btn-quick-tour" style="flex: 1; padding: 7px 10px; background: #2563eb; color: white; border: none; border-radius: 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 8px rgba(37,99,235,0.25); transition: all 0.2s;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        <span>ツアー再生</span>
       </button>
-      <button id="btn-quick-photobook" style="flex: 1; padding: 7px 10px; background: #f1f5f9; color: #0f172a; border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s;">
-        📖 旅のフォトブック
+      <button id="btn-quick-photobook" style="flex: 1; padding: 7px 10px; background: #f1f5f9; color: #0f172a; border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        <span>旅のフォトブック</span>
       </button>
     </div>
   `;
@@ -151,10 +160,17 @@ async function bootstrap() {
       onFilterChange: (filteredMemories) => {
         currentFilteredMemories = filteredMemories;
         renderMarkers(filteredMemories);
+        const filterState = getFilterState();
+        if (filterState && filterState.selectedAlbum) {
+          drawRouteLine(filteredMemories);
+        } else {
+          clearRouteLine();
+        }
       },
       onAlbumSelect: (albumName, albumMemories) => {
         currentFilteredMemories = albumMemories;
-        if (albumMemories && albumMemories.length > 0) {
+        if (albumName && albumMemories && albumMemories.length > 0) {
+          drawRouteLine(albumMemories);
           const latlngs = albumMemories
             .filter(m => typeof m.lat === 'number' && typeof m.lng === 'number')
             .map(m => [m.lat, m.lng]);
@@ -168,6 +184,8 @@ async function bootstrap() {
               animate: true
             });
           }
+        } else {
+          clearRouteLine();
         }
       }
     });

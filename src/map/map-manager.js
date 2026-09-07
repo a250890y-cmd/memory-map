@@ -1,7 +1,7 @@
 /**
  * Memory Map - 地図管理モジュール
- * Leaflet の初期化、安定したオープンソース地図タイルの設定、
- * およびマーカークラスタリングによる思い出ピンの描画とポップアップ制御を行います。
+ * Google Maps タイルによる地図描画、アルバム時系列経路（Polyline）の描画・消去、
+ * および絵文字を排除したクリーンなマーカークラスタとポップアップ制御を行います。
  */
 
 import L from 'leaflet';
@@ -9,25 +9,20 @@ import 'leaflet.markercluster';
 
 let mapInstance = null;
 let clusterGroup = null;
+let routePolyline = null;
 
-// タイルプロバイダの定義（外部アクセス制限や403に強いオープンソースタイルを採用）
-const TILE_PROVIDERS = {
-  osm: {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
-    maxZoom: 19
-  },
-  cartoVoyager: {
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    maxZoom: 19
-  }
+// Google Maps タイルレイヤー設定
+const GOOGLE_MAPS_CONFIG = {
+  url: 'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+  subdomains: ['0', '1', '2', '3'],
+  attribution: '&copy; Google Maps',
+  maxZoom: 20
 };
 
 /**
  * 地図を初期化する
- * @param {string} containerId 地図をマウントするHTML要素のID
- * @param {Object} [options]
+ * @param {string} containerId 
+ * @param {Object} [options] 
  * @returns {L.Map}
  */
 export function initMap(containerId = 'map', options = {}) {
@@ -36,7 +31,6 @@ export function initMap(containerId = 'map', options = {}) {
     mapInstance = null;
   }
 
-  // 日本列島全体を見渡す初期座標
   const defaultCenter = options.center || [36.2048, 138.2529];
   const defaultZoom = options.zoom || 5;
 
@@ -47,17 +41,15 @@ export function initMap(containerId = 'map', options = {}) {
     worldCopyJump: true
   });
 
-  // ズームコントロールを右下に配置
   L.control.zoom({ position: 'bottomright' }).addTo(mapInstance);
 
-  // 標準タイル（CartoDB Voyager: 視認性が高く写真が映えるニュートラルなデザイン）
-  const tileConfig = TILE_PROVIDERS.cartoVoyager;
-  L.tileLayer(tileConfig.url, {
-    attribution: tileConfig.attribution,
-    maxZoom: tileConfig.maxZoom
+  // Google Maps タイルレイヤーを適用
+  L.tileLayer(GOOGLE_MAPS_CONFIG.url, {
+    attribution: GOOGLE_MAPS_CONFIG.attribution,
+    maxZoom: GOOGLE_MAPS_CONFIG.maxZoom,
+    subdomains: GOOGLE_MAPS_CONFIG.subdomains
   }).addTo(mapInstance);
 
-  // マーカークラスタグループの初期化
   clusterGroup = L.markerClusterGroup({
     maxClusterRadius: 40,
     spiderfyOnMaxZoom: true,
@@ -69,20 +61,10 @@ export function initMap(containerId = 'map', options = {}) {
   return mapInstance;
 }
 
-/**
- * 現在の地図インスタンスを取得
- * @returns {L.Map|null}
- */
 export function getMap() {
   return mapInstance;
 }
 
-/**
- * 指定した座標へスムーズに移動
- * @param {number} lat 
- * @param {number} lng 
- * @param {number} [zoom=13] 
- */
 export function flyToLocation(lat, lng, zoom = 13) {
   if (mapInstance && typeof lat === 'number' && typeof lng === 'number') {
     mapInstance.flyTo([lat, lng], zoom, {
@@ -93,10 +75,47 @@ export function flyToLocation(lat, lng, zoom = 13) {
 }
 
 /**
- * 日時文字列を日本語表記にフォーマット
- * @param {string} dateStr 
- * @returns {string}
+ * アルバム選択時にピンを時系列順に結ぶポリラインを描画
+ * @param {Array<Object>} memories 
  */
+export function drawRouteLine(memories = []) {
+  clearRouteLine();
+  if (!mapInstance || !Array.isArray(memories) || memories.length < 2) return;
+
+  // 時系列順（古い順）にソート
+  const sorted = [...memories].sort((a, b) => {
+    const timeA = new Date(a.datetime || a.timestamp || 0).getTime();
+    const timeB = new Date(b.datetime || b.timestamp || 0).getTime();
+    return timeA - timeB;
+  });
+
+  const latlngs = sorted
+    .filter(m => typeof m.lat === 'number' && typeof m.lng === 'number' && !isNaN(m.lat) && !isNaN(m.lng))
+    .map(m => [m.lat, m.lng]);
+
+  if (latlngs.length < 2) return;
+
+  // スタイリッシュな青色の破線ルートを描画
+  routePolyline = L.polyline(latlngs, {
+    color: '#2563eb',
+    weight: 3.5,
+    opacity: 0.85,
+    dashArray: '8, 8',
+    lineCap: 'round',
+    lineJoin: 'round'
+  }).addTo(mapInstance);
+}
+
+/**
+ * ポリラインを地図から消去
+ */
+export function clearRouteLine() {
+  if (routePolyline && mapInstance) {
+    mapInstance.removeLayer(routePolyline);
+    routePolyline = null;
+  }
+}
+
 function formatDisplayDate(dateStr) {
   if (!dateStr) return '';
   const dt = new Date(dateStr);
@@ -105,7 +124,7 @@ function formatDisplayDate(dateStr) {
 }
 
 /**
- * 思い出データの配列を受け取り、マーカークラスタとして地図上にプロットする
+ * マーカーを描画（絵文字を完全に排除したクリーンなスタイル）
  * @param {Array<Object>} memories 
  * @param {Function} [onMarkerClick] 
  */
@@ -118,7 +137,6 @@ export function renderMarkers(memories = [], onMarkerClick = null) {
     if (typeof memory.lat !== 'number' || typeof memory.lng !== 'number') return;
     if (isNaN(memory.lat) || isNaN(memory.lng)) return;
 
-    // 写真付きの場合は円形サムネイル、ない場合はシンプルなピン
     const hasPhoto = Array.isArray(memory.imageUrls) && memory.imageUrls.length > 0;
     const coverPhoto = hasPhoto ? memory.imageUrls[0] : null;
 
@@ -158,10 +176,13 @@ export function renderMarkers(memories = [], onMarkerClick = null) {
 
     const marker = L.marker([memory.lat, memory.lng], { icon: customIcon });
 
-    // ポップアップ HTML の組み立て
     const title = memory.title || '無題の思い出';
     const displayDate = formatDisplayDate(memory.datetime || memory.timestamp);
-    const albumBadge = memory.album ? `<div style="font-size: 0.72rem; color: #2563eb; font-weight: 600; margin-bottom: 2px;">📁 ${memory.album}</div>` : '';
+    
+    // 絵文字を排除したクリーンなアルバムタグ
+    const albumBadge = memory.album
+      ? `<div style="display: inline-block; font-size: 0.72rem; color: #2563eb; font-weight: 700; background: rgba(37,99,235,0.08); padding: 2px 8px; border-radius: 6px; margin-bottom: 4px;">ALBUM: ${memory.album}</div>`
+      : '';
     const diaryText = memory.diary ? `<p style="font-size: 0.82rem; color: #475569; margin-top: 6px; line-height: 1.4; max-height: 60px; overflow: hidden; text-overflow: ellipsis;">${memory.diary}</p>` : '';
     
     const imageHtml = coverPhoto
