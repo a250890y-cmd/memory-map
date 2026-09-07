@@ -1,7 +1,7 @@
 /**
  * Memory Map - メインエントリーポイント
  * アプリのブートストラップ、スタイル読み込み、初期データシード、
- * 地図描画、および思い出記録モーダルの連携を行います。
+ * 地図描画、思い出記録モーダル、およびサイドバー絞り込み検索の連携を行います。
  */
 
 // スタイルのインポート
@@ -13,6 +13,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { initMap, renderMarkers, flyToLocation, getMap } from './map/map-manager';
 import { getAllMemories, saveMemory } from './services/storage';
 import { initMemoryModal, openCreateModal, openEditModal } from './components/memory-modal';
+import { initSidebar, updateSidebar } from './components/sidebar';
 
 /**
  * 初回起動時、データが空であれば動作確認用のサンプルデータを投入する
@@ -45,11 +46,14 @@ async function loadOrSeedMemories() {
 }
 
 /**
- * 最新の思い出一覧を取得し、地図上のピンを再描画する
+ * 最新の思い出一覧を取得し、地図とサイドバーを同時に再描画・更新する
+ * @returns {Promise<Array>}
  */
-async function refreshMarkers() {
+async function refreshAllData() {
   const memories = await getAllMemories();
   renderMarkers(memories);
+  updateSidebar(memories);
+  return memories;
 }
 
 /**
@@ -71,24 +75,54 @@ async function bootstrap() {
       flyToLocation(memories[0].lat, memories[0].lng, 10);
     }
 
-    // 5. 思い出記録モーダルの初期化とコールバック接続
+    // 5. サイドバーの初期化（フィルター変更・アルバム選択連携）
+    initSidebar({
+      containerId: 'sidebar-content',
+      onFilterChange: (filteredMemories) => {
+        // 絞り込まれた思い出のみを地図上に再描画
+        renderMarkers(filteredMemories);
+      },
+      onAlbumSelect: (albumName, albumMemories) => {
+        // アルバムが選択されたら、そのアルバム内のピン全体が見えるようカメラを調整
+        if (albumMemories && albumMemories.length > 0) {
+          const latlngs = albumMemories
+            .filter(m => typeof m.lat === 'number' && typeof m.lng === 'number')
+            .map(m => [m.lat, m.lng]);
+
+          if (latlngs.length === 1) {
+            flyToLocation(latlngs[0][0], latlngs[0][1], 13);
+          } else if (latlngs.length > 1) {
+            map.fitBounds(latlngs, {
+              padding: [60, 60],
+              maxZoom: 15,
+              animate: true
+            });
+          }
+        }
+      }
+    });
+
+    // 6. サイドバーに思い出データを反映して集計表示
+    updateSidebar(memories);
+
+    // 7. 思い出記録モーダルの初期化とコールバック接続
     initMemoryModal({
       getFallbackLocation: () => {
         const center = map.getCenter();
         return { lat: center.lat, lng: center.lng };
       },
       onSave: async (savedMemory) => {
-        await refreshMarkers();
+        await refreshAllData();
         if (savedMemory && savedMemory.lat && savedMemory.lng) {
           flyToLocation(savedMemory.lat, savedMemory.lng, 14);
         }
       },
       onDelete: async () => {
-        await refreshMarkers();
+        await refreshAllData();
       }
     });
 
-    // 6. 地図上をクリックしたときに、その地点を初期位置として記録モーダルを開く
+    // 8. 地図上をクリックしたときに、その地点を初期位置として記録モーダルを開く
     map.on('click', (e) => {
       openCreateModal({
         lat: e.latlng.lat,
@@ -96,7 +130,7 @@ async function bootstrap() {
       });
     });
 
-    // 7. ポップアップ内のダブルクリックや要素操作で編集モーダルを開けるよう委譲サポート
+    // 9. ポップアップ内のダブルクリックで編集モーダルを開く委譲サポート
     document.addEventListener('dblclick', async (e) => {
       const popup = e.target.closest('.memory-popup-content');
       if (popup) {
