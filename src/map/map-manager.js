@@ -537,10 +537,29 @@ function formatDisplayDate(dateStr) {
 /**
  * マーカーを描画（絵文字を完全に排除したクリーンなスタイル）
  * @param {Array<Object>} memories 
- * @param {Function} [onMarkerClick] 
+/**
+ * マーカーを描画（写真インライン送り、編集・削除アクション対応）
+ * @param {Array<Object>} memories 
+ * @param {Function|Object} [onMarkerClickOrOptions] 
+ * @param {Function} [onEditMemory] 
+ * @param {Function} [onDeleteMemory] 
  */
-export function renderMarkers(memories = [], onMarkerClick = null) {
+export function renderMarkers(memories = [], onMarkerClickOrOptions = null, onEditMemory = null, onDeleteMemory = null) {
   if (!clusterGroup) return;
+
+  let onMarkerClick = null;
+  let onEdit = null;
+  let onDelete = null;
+
+  if (typeof onMarkerClickOrOptions === 'function') {
+    onMarkerClick = onMarkerClickOrOptions;
+    onEdit = onEditMemory;
+    onDelete = onDeleteMemory;
+  } else if (onMarkerClickOrOptions && typeof onMarkerClickOrOptions === 'object') {
+    onMarkerClick = onMarkerClickOrOptions.onMarkerClick || null;
+    onEdit = onMarkerClickOrOptions.onEdit || onMarkerClickOrOptions.onEditMemory || null;
+    onDelete = onMarkerClickOrOptions.onDelete || onMarkerClickOrOptions.onDeleteMemory || null;
+  }
 
   clusterGroup.clearLayers();
 
@@ -596,40 +615,132 @@ export function renderMarkers(memories = [], onMarkerClick = null) {
       ? `<div style="display: inline-block; font-size: 0.72rem; color: #2563eb; font-weight: 700; background: rgba(37,99,235,0.08); padding: 2px 8px; border-radius: 6px; margin-bottom: 4px;">ALBUM: ${memory.album}</div>`
       : '';
     const diaryText = memory.diary ? `<p style="font-size: 0.82rem; color: #475569; margin-top: 6px; line-height: 1.4; max-height: 60px; overflow: hidden; text-overflow: ellipsis;">${memory.diary}</p>` : '';
+
+    // 写真エリア（複数写真の場合は前後のインライン切り替え矢印を配置）
     const imageHtml = coverPhoto
-      ? `<div class="memory-popup-image-box" style="width: 100%; height: 130px; border-radius: 10px; overflow: hidden; margin-bottom: 8px; background: #f1f5f9; cursor: pointer; position: relative;" title="クリックして拡大表示">
-          <img src="${coverPhoto}" alt="${title}" style="width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s ease;" />
-          <div style="position: absolute; right: 6px; bottom: 6px; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); border-radius: 6px; padding: 2px 6px; color: white; font-size: 0.68rem; font-weight: 700; display: flex; align-items: center; gap: 4px; pointer-events: none;">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
-            <span>${photos.length > 1 ? `${photos.length}枚` : '拡大'}</span>
-          </div>
+      ? `<div class="memory-popup-image-box" style="width: 100%; height: 135px; border-radius: 10px; overflow: hidden; margin-bottom: 8px; background: #f1f5f9; position: relative;">
+          <img class="popup-current-img" src="${coverPhoto}" alt="${title}" style="width: 100%; height: 100%; object-fit: cover; display: block; cursor: pointer; transition: opacity 0.2s ease;" title="クリックして拡大表示" />
+          
+          ${photos.length > 1 ? `
+            <button type="button" class="popup-carousel-btn prev" style="position: absolute; left: 6px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border-radius: 50%; background: rgba(15, 23, 42, 0.7); border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); z-index: 5;" title="前の写真">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <button type="button" class="popup-carousel-btn next" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border-radius: 50%; background: rgba(15, 23, 42, 0.7); border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); z-index: 5;" title="次の写真">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+            <div class="popup-photo-indicator" style="position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); border-radius: 10px; padding: 2px 8px; color: white; font-size: 0.65rem; font-weight: 700; pointer-events: none; z-index: 4;">
+              1 / ${photos.length}
+            </div>
+          ` : `
+            <div style="position: absolute; right: 6px; bottom: 6px; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); border-radius: 6px; padding: 2px 6px; color: white; font-size: 0.65rem; font-weight: 700; display: flex; align-items: center; gap: 4px; pointer-events: none; z-index: 4;">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+              <span>拡大</span>
+            </div>
+          `}
          </div>`
       : '';
 
+    // ポップアップ下部アクションバー（編集・削除）
+    const actionBarHtml = `
+      <div class="popup-action-bar" style="display: flex; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(0, 0, 0, 0.06);">
+        <button type="button" class="btn-popup-edit" style="flex: 1; padding: 5px 8px; background: #f8fafc; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 8px; font-size: 0.75rem; font-weight: 700; color: #334155; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+          </svg>
+          <span>編集</span>
+        </button>
+        <button type="button" class="btn-popup-delete" style="padding: 5px 8px; background: #fee2e2; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; font-size: 0.75rem; font-weight: 700; color: #dc2626; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s;" title="この思い出を削除">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          <span>削除</span>
+        </button>
+      </div>
+    `;
+
     const popupHtml = `
-      <div class="memory-popup-content" style="min-width: 200px; max-width: 240px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <div class="memory-popup-content" style="min-width: 210px; max-width: 250px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
         ${imageHtml}
         ${albumBadge}
         <h4 style="margin: 0 0 4px 0; font-size: 0.95rem; font-weight: 700; color: #0f172a; line-height: 1.3;">${title}</h4>
         ${displayDate ? `<div style="font-size: 0.75rem; color: #94a3b8;">${displayDate}</div>` : ''}
         ${diaryText}
+        ${actionBarHtml}
       </div>
     `;
 
     marker.bindPopup(popupHtml, {
-      maxWidth: 260,
+      maxWidth: 270,
       className: 'custom-memory-popup'
     });
 
     marker.on('popupopen', (e) => {
       const popupEl = e.popup.getElement();
       if (!popupEl) return;
-      const imgBox = popupEl.querySelector('.memory-popup-image-box');
-      if (imgBox && hasPhoto) {
-        imgBox.addEventListener('click', () => {
-          openLightbox(photos, 0);
+
+      let currentPhotoIdx = 0;
+      const imgEl = popupEl.querySelector('.popup-current-img');
+      const indicatorEl = popupEl.querySelector('.popup-photo-indicator');
+      const btnPrev = popupEl.querySelector('.popup-carousel-btn.prev');
+      const btnNext = popupEl.querySelector('.popup-carousel-btn.next');
+
+      // 前後の写真切り替えハンドラ
+      if (photos.length > 1 && imgEl && indicatorEl) {
+        const updatePopupPhoto = (idx) => {
+          if (idx < 0) currentPhotoIdx = photos.length - 1;
+          else if (idx >= photos.length) currentPhotoIdx = 0;
+          else currentPhotoIdx = idx;
+
+          imgEl.style.opacity = '0';
+          setTimeout(() => {
+            imgEl.src = photos[currentPhotoIdx];
+            imgEl.style.opacity = '1';
+            indicatorEl.textContent = `${currentPhotoIdx + 1} / ${photos.length}`;
+          }, 150);
+        };
+
+        btnPrev?.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          updatePopupPhoto(currentPhotoIdx - 1);
+        });
+
+        btnNext?.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          updatePopupPhoto(currentPhotoIdx + 1);
         });
       }
+
+      // 画像クリックで拡大ライトボックス起動
+      if (imgEl && hasPhoto) {
+        imgEl.addEventListener('click', () => {
+          openLightbox(photos, currentPhotoIdx);
+        });
+      }
+
+      // 編集ボタンハンドラ
+      const btnEdit = popupEl.querySelector('.btn-popup-edit');
+      btnEdit?.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        marker.closePopup();
+        if (typeof onEdit === 'function') {
+          onEdit(memory);
+        }
+        window.dispatchEvent(new CustomEvent('memorymap:edit-memory', { detail: memory }));
+      });
+
+      // 削除ボタンハンドラ
+      const btnDelete = popupEl.querySelector('.btn-popup-delete');
+      btnDelete?.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (confirm(`思い出「${title}」を削除してもよろしいですか？`)) {
+          marker.closePopup();
+          if (typeof onDelete === 'function') {
+            onDelete(memory.id);
+          }
+          window.dispatchEvent(new CustomEvent('memorymap:delete-memory', { detail: { id: memory.id } }));
+        }
+      });
     });
 
     if (typeof onMarkerClick === 'function') {

@@ -148,8 +148,14 @@ function createModalDOM() {
             <textarea id="input-memory-diary" rows="3" class="form-textarea" placeholder="どんな思い出でしたか？自由に残しましょう"></textarea>
           </div>
 
-          <div id="delete-action-row" class="delete-action-row hidden">
-            <button type="button" id="btn-delete-memory" class="btn-danger-link">この思い出を削除する</button>
+          <div id="delete-action-row" class="delete-action-row hidden" style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end;">
+            <button type="button" id="btn-delete-memory" class="btn-danger-link" style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>この思い出を削除する</span>
+            </button>
           </div>
         </div>
 
@@ -566,4 +572,16 @@ export function initMemoryModal(callbacks = {}) {
     ...callbacks
   };
   createModalDOM();
+}
+
+/**
+ * 思い出モーダルを開く（新規作成または編集の統合関数）
+ * @param {Object|null} target 思い出オブジェクトまたは初期位置 { lat, lng }
+ */
+export function openMemoryModal(target = null) {
+  if (target && target.id) {
+    openEditModal(target);
+  } else {
+    openCreateModal(target);
+  }
 }

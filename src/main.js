@@ -12,8 +12,8 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
 import { initMap, renderMarkers, flyToLocation, getMap, drawRouteLine, clearRouteLine } from './map/map-manager';
-import { getAllMemories, saveMemory } from './services/storage';
-import { initMemoryModal, openCreateModal, openEditModal } from './components/memory-modal';
+import { getAllMemories, saveMemory, deleteMemory } from './services/storage';
+import { initMemoryModal, openCreateModal, openEditModal, openMemoryModal } from './components/memory-modal';
 import { initSidebar, updateSidebar, getFilterState } from './components/sidebar';
 import { startAlbumTour } from './components/tour-player';
 import { openPhotobookModal } from './components/photobook-modal';
@@ -57,6 +57,43 @@ async function loadOrSeedMemories() {
 }
 
 /**
+ * 思い出の削除処理（ローカル削除、画面最新化、クラウド非同期同期）
+ * @param {string} deletedId 
+ */
+async function handleDeleteMemory(deletedId) {
+  if (!deletedId) return;
+  try {
+    await deleteMemory(deletedId);
+    await refreshAllData();
+
+    // ログイン中であればクラウドからも非同期削除
+    const user = getCurrentUser();
+    if (user) {
+      deleteCloudMemory(user, deletedId).catch(e => console.warn('[Main] クラウド削除保留:', e));
+    }
+  } catch (err) {
+    console.error('[Main] 思い出削除エラー:', err);
+    alert('削除に失敗しました: ' + err.message);
+  }
+}
+
+/**
+ * ピンを描画し、編集・削除コールバックをバインド
+ * @param {Array<Object>} mems 
+ */
+function renderAppMarkers(mems) {
+  renderMarkers(mems, {
+    onMarkerClick: null,
+    onEdit: (memory) => {
+      openEditModal(memory);
+    },
+    onDelete: async (memoryId) => {
+      await handleDeleteMemory(memoryId);
+    }
+  });
+}
+
+/**
  * 最新の思い出一覧を取得し、地図とサイドバーを同時に再描画・更新する
  * @returns {Promise<Array>}
  */
@@ -64,7 +101,7 @@ async function refreshAllData() {
   const memories = await getAllMemories();
   allMemoriesCache = memories;
   currentFilteredMemories = memories;
-  renderMarkers(memories);
+  renderAppMarkers(memories);
   updateSidebar(memories);
   const filterState = getFilterState();
   if (filterState && filterState.selectedAlbum) {
@@ -147,7 +184,7 @@ async function bootstrap() {
     const memories = await loadOrSeedMemories();
 
     // 3. マーカーのプロット
-    renderMarkers(memories);
+    renderAppMarkers(memories);
 
     // 4. データが存在する場合は最初のスポットへカメラを移動
     if (memories.length > 0 && memories[0].lat && memories[0].lng) {
@@ -159,7 +196,7 @@ async function bootstrap() {
       containerId: 'sidebar-content',
       onFilterChange: (filteredMemories) => {
         currentFilteredMemories = filteredMemories;
-        renderMarkers(filteredMemories);
+        renderAppMarkers(filteredMemories);
         const filterState = getFilterState();
         if (filterState && filterState.selectedAlbum) {
           drawRouteLine(filteredMemories);
@@ -221,36 +258,30 @@ async function bootstrap() {
         }
       },
       onDelete: async (deletedId) => {
-        // 1. ローカル画面を即座に更新
-        await refreshAllData();
-
-        // 2. ログイン中であればクラウドからも非同期削除
-        const user = getCurrentUser();
-        if (user && deletedId) {
-          deleteCloudMemory(user, deletedId).catch(e => console.warn('[Main] クラウド削除保留:', e));
-        }
+        await handleDeleteMemory(deletedId);
       }
     });
 
-    // 10. 地図上をクリックしたときに、その地点を初期位置として記録モーダルを開く
-    map.on('click', (e) => {
+    // 10. PCの右クリック（contextmenu）でピン作成モーダルを開く（通常の左クリックは地図移動・ピン選択用）
+    map.on('contextmenu', (e) => {
       openCreateModal({
         lat: e.latlng.lat,
         lng: e.latlng.lng
       });
     });
 
-    // 11. ポップアップ内のダブルクリックで編集モーダルを開く委譲サポート
-    document.addEventListener('dblclick', async (e) => {
-      const popup = e.target.closest('.memory-popup-content');
-      if (popup) {
-        const titleEl = popup.querySelector('h4');
-        const titleText = titleEl ? titleEl.textContent : '';
-        const all = await getAllMemories();
-        const found = all.find(m => m.title === titleText);
-        if (found) {
-          openEditModal(found);
-        }
+    // 11. カスタムイベント経由での編集・削除連携
+    window.addEventListener('memorymap:edit-memory', (e) => {
+      const memory = e.detail?.memory || e.detail;
+      if (memory && typeof memory === 'object' && (memory.id || memory.title)) {
+        openEditModal(memory);
+      }
+    });
+
+    window.addEventListener('memorymap:delete-memory', async (e) => {
+      const memoryId = e.detail?.memoryId || e.detail?.id || (typeof e.detail === 'string' ? e.detail : null);
+      if (memoryId) {
+        await handleDeleteMemory(memoryId);
       }
     });
 
