@@ -6,6 +6,7 @@
 
 import L from 'leaflet';
 import 'leaflet.markercluster';
+import { openLightbox } from '../components/lightbox';
 
 let mapInstance = null;
 let clusterGroup = null;
@@ -14,6 +15,7 @@ let currentRouteRequestId = 0;
 let currentAbortController = null;
 let homeMarkerInstance = null;
 let currentHomeCoords = null;
+let currentLocationMarker = null;
 
 // Google Maps タイルレイヤー設定
 const GOOGLE_MAPS_CONFIG = {
@@ -22,6 +24,175 @@ const GOOGLE_MAPS_CONFIG = {
   attribution: '&copy; Google Maps',
   maxZoom: 20
 };
+
+/**
+ * 現在地マーカー（青いパルス円）を表示
+ * @param {number} lat 
+ * @param {number} lng 
+ */
+export function showCurrentLocationMarker(lat, lng) {
+  if (!mapInstance || typeof lat !== 'number' || typeof lng !== 'number') return;
+
+  if (currentLocationMarker) {
+    mapInstance.removeLayer(currentLocationMarker);
+    currentLocationMarker = null;
+  }
+
+  const pulseIcon = L.divIcon({
+    className: 'current-location-pulse-div-icon',
+    html: `
+      <div class="current-location-pulse-container">
+        <div class="current-location-pulse-ring"></div>
+        <div class="current-location-pulse-dot"></div>
+      </div>
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16]
+  });
+
+  currentLocationMarker = L.marker([lat, lng], {
+    icon: pulseIcon,
+    zIndexOffset: 900
+  }).addTo(mapInstance);
+}
+
+/**
+ * 地図右下にGPS現在地取得コントロールを設置
+ * @param {L.Map} map 
+ */
+function setupGeolocationControl(map) {
+  const GpsControl = L.Control.extend({
+    options: { position: 'bottomright' },
+    onAdd: function() {
+      const container = L.DomUtil.create('div', 'leaflet-bar map-control-wrapper');
+      container.innerHTML = `
+        <button id="btn-map-gps" class="map-gps-btn" type="button" title="現在地に移動" aria-label="現在地に移動">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="3"></circle>
+            <line x1="12" y1="2" x2="12" y2="5"></line>
+            <line x1="12" y1="19" x2="12" y2="22"></line>
+            <line x1="2" y1="12" x2="5" y2="12"></line>
+            <line x1="18" y1="12" x2="22" y2="12"></line>
+          </svg>
+        </button>
+      `;
+
+      L.DomEvent.disableClickPropagation(container);
+
+      const btn = container.querySelector('#btn-map-gps');
+      btn.addEventListener('click', () => {
+        if (!navigator.geolocation) {
+          alert('お使いのブラウザは現在地取得に対応していません。');
+          return;
+        }
+
+        btn.classList.add('loading');
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            btn.classList.remove('loading');
+            const { latitude: lat, longitude: lng } = pos.coords;
+            flyToLocation(lat, lng, 16);
+            showCurrentLocationMarker(lat, lng);
+          },
+          (err) => {
+            btn.classList.remove('loading');
+            console.warn('現在地取得エラー:', err);
+            alert('現在地を取得できませんでした。ブラウザの位置情報パーミッションをご確認ください。');
+          },
+          { enableHighAccuracy: true, timeout: 8000 }
+        );
+      });
+
+      return container;
+    }
+  });
+
+  new GpsControl().addTo(map);
+}
+
+/**
+ * 地図右上に地名・住所検索バーコントロールを設置
+ * @param {L.Map} map 
+ */
+function setupGeocoderControl(map) {
+  const SearchControl = L.Control.extend({
+    options: { position: 'topright' },
+    onAdd: function() {
+      const container = L.DomUtil.create('div', 'map-search-container');
+      container.innerHTML = `
+        <div class="map-search-bar">
+          <svg class="map-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="map-address-search-input" class="map-address-search-input" placeholder="地名や住所を検索..." aria-label="地名や住所を検索" />
+          <button id="btn-map-search-clear" class="map-search-clear-btn hidden" type="button" aria-label="検索クリア">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      `;
+
+      L.DomEvent.disableClickPropagation(container);
+      L.DomEvent.disableScrollPropagation(container);
+
+      const input = container.querySelector('#map-address-search-input');
+      const clearBtn = container.querySelector('#btn-map-search-clear');
+
+      input.addEventListener('input', () => {
+        if (input.value.trim()) {
+          clearBtn.classList.remove('hidden');
+        } else {
+          clearBtn.classList.add('hidden');
+        }
+      });
+
+      clearBtn.addEventListener('click', () => {
+        input.value = '';
+        clearBtn.classList.add('hidden');
+        input.focus();
+      });
+
+      input.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const query = input.value.trim();
+          if (!query) return;
+
+          input.blur();
+          input.disabled = true;
+
+          try {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('Search request failed');
+            const data = await res.json();
+
+            if (Array.isArray(data) && data.length > 0) {
+              const lat = parseFloat(data[0].lat);
+              const lon = parseFloat(data[0].lon);
+              flyToLocation(lat, lon, 14);
+            } else {
+              alert(`「${query}」に一致する場所が見つかりませんでした。`);
+            }
+          } catch (err) {
+            console.error('地名検索エラー:', err);
+            alert('検索処理中にエラーが発生しました。ネットワーク接続をご確認ください。');
+          } finally {
+            input.disabled = false;
+          }
+        }
+      });
+
+      return container;
+    }
+  });
+
+  new SearchControl().addTo(map);
+}
 
 /**
  * 地図を初期化する
@@ -46,6 +217,12 @@ export function initMap(containerId = 'map', options = {}) {
   });
 
   L.control.zoom({ position: 'bottomright' }).addTo(mapInstance);
+
+  // GPS現在地コントロールを追加
+  setupGeolocationControl(mapInstance);
+
+  // 地名・住所検索コントロールを追加
+  setupGeocoderControl(mapInstance);
 
   // Google Maps タイルレイヤーを適用
   L.tileLayer(GOOGLE_MAPS_CONFIG.url, {
@@ -371,8 +548,9 @@ export function renderMarkers(memories = [], onMarkerClick = null) {
     if (typeof memory.lat !== 'number' || typeof memory.lng !== 'number') return;
     if (isNaN(memory.lat) || isNaN(memory.lng)) return;
 
-    const hasPhoto = Array.isArray(memory.imageUrls) && memory.imageUrls.length > 0;
-    const coverPhoto = hasPhoto ? memory.imageUrls[0] : null;
+    const photos = Array.isArray(memory.imageUrls) ? memory.imageUrls : [];
+    const hasPhoto = photos.length > 0;
+    const coverPhoto = hasPhoto ? photos[0] : null;
 
     const iconHtml = coverPhoto
       ? `<div style="
@@ -418,10 +596,13 @@ export function renderMarkers(memories = [], onMarkerClick = null) {
       ? `<div style="display: inline-block; font-size: 0.72rem; color: #2563eb; font-weight: 700; background: rgba(37,99,235,0.08); padding: 2px 8px; border-radius: 6px; margin-bottom: 4px;">ALBUM: ${memory.album}</div>`
       : '';
     const diaryText = memory.diary ? `<p style="font-size: 0.82rem; color: #475569; margin-top: 6px; line-height: 1.4; max-height: 60px; overflow: hidden; text-overflow: ellipsis;">${memory.diary}</p>` : '';
-    
     const imageHtml = coverPhoto
-      ? `<div style="width: 100%; height: 130px; border-radius: 10px; overflow: hidden; margin-bottom: 8px; background: #f1f5f9;">
-          <img src="${coverPhoto}" alt="${title}" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+      ? `<div class="memory-popup-image-box" style="width: 100%; height: 130px; border-radius: 10px; overflow: hidden; margin-bottom: 8px; background: #f1f5f9; cursor: pointer; position: relative;" title="クリックして拡大表示">
+          <img src="${coverPhoto}" alt="${title}" style="width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s ease;" />
+          <div style="position: absolute; right: 6px; bottom: 6px; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); border-radius: 6px; padding: 2px 6px; color: white; font-size: 0.68rem; font-weight: 700; display: flex; align-items: center; gap: 4px; pointer-events: none;">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+            <span>${photos.length > 1 ? `${photos.length}枚` : '拡大'}</span>
+          </div>
          </div>`
       : '';
 
@@ -438,6 +619,17 @@ export function renderMarkers(memories = [], onMarkerClick = null) {
     marker.bindPopup(popupHtml, {
       maxWidth: 260,
       className: 'custom-memory-popup'
+    });
+
+    marker.on('popupopen', (e) => {
+      const popupEl = e.popup.getElement();
+      if (!popupEl) return;
+      const imgBox = popupEl.querySelector('.memory-popup-image-box');
+      if (imgBox && hasPhoto) {
+        imgBox.addEventListener('click', () => {
+          openLightbox(photos, 0);
+        });
+      }
     });
 
     if (typeof onMarkerClick === 'function') {
