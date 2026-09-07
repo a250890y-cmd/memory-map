@@ -9,7 +9,9 @@ import 'leaflet.markercluster';
 
 let mapInstance = null;
 let clusterGroup = null;
-let routePolyline = null;
+let routeLayers = null;
+let currentRouteRequestId = 0;
+let currentAbortController = null;
 
 // Google Maps タイルレイヤー設定
 const GOOGLE_MAPS_CONFIG = {
@@ -75,12 +77,89 @@ export function flyToLocation(lat, lng, zoom = 13) {
 }
 
 /**
- * アルバム選択時にピンを時系列順に結ぶポリラインを描画
+ * 道路沿いルート（またはフォールバック直線）のレイヤーグループを描画
+ * @param {Array<Array<number>>} coords
+ * @param {boolean} isRoadSnapped
+ */
+function renderRoutePolylines(coords, isRoadSnapped = true) {
+  if (!mapInstance || !coords || coords.length < 2) return;
+
+  if (routeLayers) {
+    mapInstance.removeLayer(routeLayers);
+    routeLayers = null;
+  }
+
+  const group = L.featureGroup();
+
+  if (isRoadSnapped) {
+    // 道路網ルート: 下敷きのアウターライン（視認性とコントラスト向上）
+    const casingLine = L.polyline(coords, {
+      color: '#ffffff',
+      weight: 7,
+      opacity: 0.9,
+      lineCap: 'round',
+      lineJoin: 'round',
+      className: 'osrm-route-casing'
+    });
+    // メインの滑らかな青線
+    const mainLine = L.polyline(coords, {
+      color: '#2563eb',
+      weight: 4.5,
+      opacity: 0.95,
+      lineCap: 'round',
+      lineJoin: 'round',
+      className: 'osrm-route-line'
+    });
+    group.addLayer(casingLine);
+    group.addLayer(mainLine);
+  } else {
+    // フォールバック直線: スタイリッシュな青色の破線
+    const fallbackLine = L.polyline(coords, {
+      color: '#2563eb',
+      weight: 3.5,
+      opacity: 0.85,
+      dashArray: '8, 8',
+      lineCap: 'round',
+      lineJoin: 'round',
+      className: 'osrm-route-fallback'
+    });
+    group.addLayer(fallbackLine);
+  }
+
+  group.addTo(mapInstance);
+  routeLayers = group;
+}
+
+/**
+ * OSRM API から区間の道なりルート座標を取得
+ * @param {Array<Array<number>>} points [ [lat, lng], ... ]
+ * @param {AbortSignal} signal
+ * @returns {Promise<Array<Array<number>>>}
+ */
+async function fetchOsrmSegment(points, signal) {
+  // OSRM は {lng},{lat} 形式
+  const coordsString = points.map(p => `${p[1]},${p[0]}`).join(';');
+  const url = `https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson`;
+
+  const res = await fetch(url, { signal });
+  if (!res.ok) throw new Error(`OSRM HTTP error: ${res.status}`);
+  const data = await res.json();
+  if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+    throw new Error('OSRM did not return valid routes');
+  }
+  // GeoJSON の coordinates は [lng, lat] なので [lat, lng] へ変換
+  return data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+}
+
+/**
+ * アルバム選択時にピンを時系列順に結ぶポリライン（OSRM道なりルート）を描画
  * @param {Array<Object>} memories 
  */
-export function drawRouteLine(memories = []) {
+export async function drawRouteLine(memories = []) {
   clearRouteLine();
   if (!mapInstance || !Array.isArray(memories) || memories.length < 2) return;
+
+  const requestId = ++currentRouteRequestId;
 
   // 時系列順（古い順）にソート
   const sorted = [...memories].sort((a, b) => {
@@ -95,24 +174,80 @@ export function drawRouteLine(memories = []) {
 
   if (latlngs.length < 2) return;
 
-  // スタイリッシュな青色の破線ルートを描画
-  routePolyline = L.polyline(latlngs, {
-    color: '#2563eb',
-    weight: 3.5,
-    opacity: 0.85,
-    dashArray: '8, 8',
-    lineCap: 'round',
-    lineJoin: 'round'
-  }).addTo(mapInstance);
+  // 1. 初動フィードバック: まず即座に直線破線を描画してユーザーの待ち時間をゼロに
+  renderRoutePolylines(latlngs, false);
+
+  // 2. OSRM API で道なりルートを探索（最大15地点ずつチャンク探索）
+  const controller = new AbortController();
+  currentAbortController = controller;
+
+  // 6秒タイムアウト（応答遅延時の早期直線フォールバック）
+  const timeoutId = setTimeout(() => {
+    try {
+      controller.abort();
+    } catch (_) {}
+  }, 6000);
+
+  try {
+    const CHUNK_SIZE = 15;
+    let roadCoords = [];
+
+    for (let i = 0; i < latlngs.length - 1; i += (CHUNK_SIZE - 1)) {
+      if (requestId !== currentRouteRequestId) return; // 別のリクエストが走った場合は破棄
+
+      const chunk = latlngs.slice(i, i + CHUNK_SIZE);
+      if (chunk.length < 2) break;
+
+      try {
+        const segment = await fetchOsrmSegment(chunk, controller.signal);
+        if (roadCoords.length > 0) {
+          roadCoords.push(...segment.slice(1));
+        } else {
+          roadCoords.push(...segment);
+        }
+      } catch (segmentErr) {
+        console.warn(`[OSRM] 区間 ${i + 1}〜${i + chunk.length} の探索失敗。直線で補間します:`, segmentErr.message);
+        if (roadCoords.length > 0) {
+          roadCoords.push(...chunk.slice(1));
+        } else {
+          roadCoords.push(...chunk);
+        }
+      }
+    }
+
+    clearTimeout(timeoutId);
+
+    // リクエストが最新でない場合は描画スキップ
+    if (requestId !== currentRouteRequestId) return;
+
+    if (roadCoords.length >= 2) {
+      renderRoutePolylines(roadCoords, true);
+    }
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (requestId !== currentRouteRequestId) return;
+    console.warn('[OSRM] ルート探索全体が中断または失敗しました。直線描画を維持します:', err.message);
+  } finally {
+    if (currentAbortController === controller) {
+      currentAbortController = null;
+    }
+  }
 }
 
 /**
  * ポリラインを地図から消去
  */
 export function clearRouteLine() {
-  if (routePolyline && mapInstance) {
-    mapInstance.removeLayer(routePolyline);
-    routePolyline = null;
+  currentRouteRequestId++;
+  if (currentAbortController) {
+    try {
+      currentAbortController.abort();
+    } catch (_) {}
+    currentAbortController = null;
+  }
+  if (routeLayers && mapInstance) {
+    mapInstance.removeLayer(routeLayers);
+    routeLayers = null;
   }
 }
 

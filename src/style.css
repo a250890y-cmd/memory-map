@@ -826,3 +826,22 @@
 .btn-secondary:hover {
   background: rgba(0, 0, 0, 0.08);
 }
+
+/* --------------------------------------------------------------------------
+   地図ルート線 (OSRM ルーティング) スタイル
+   -------------------------------------------------------------------------- */
+.osrm-route-line {
+  filter: drop-shadow(0 2px 5px rgba(37, 99, 235, 0.45));
+  transition: stroke 0.3s ease, opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.osrm-route-casing {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.25));
+  pointer-events: none;
+}
+
+.osrm-route-fallback {
+  filter: drop-shadow(0 2px 4px rgba(37, 99, 235, 0.3));
+  pointer-events: none;
+}
