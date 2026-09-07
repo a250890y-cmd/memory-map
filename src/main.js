@@ -2,7 +2,7 @@
  * Memory Map - メインエントリーポイント
  * アプリのブートストラップ、スタイル読み込み、初期データシード、
  * 地図描画、思い出記録モーダル、サイドバー絞り込み検索、
- * アルバムツアー再生、およびフォトブック出力の統合管理を行います。
+ * アルバムツアー再生、フォトブック出力、および Google 認証・クラウド自動同期を統合管理します。
  */
 
 // スタイルのインポート
@@ -17,6 +17,9 @@ import { initMemoryModal, openCreateModal, openEditModal } from './components/me
 import { initSidebar, updateSidebar, getFilterState } from './components/sidebar';
 import { startAlbumTour } from './components/tour-player';
 import { openPhotobookModal } from './components/photobook-modal';
+import { initAuthUI } from './components/auth-button';
+import { getCurrentUser } from './services/auth-service';
+import { syncSingleMemoryToCloud, deleteCloudMemory } from './services/cloud-sync';
 
 let allMemoriesCache = [];
 let currentFilteredMemories = [];
@@ -102,6 +105,28 @@ function setupHeaderActions(map) {
 }
 
 /**
+ * サイドバー下部に認証コンテナを設置して初期化
+ */
+function setupAuthContainer() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar || document.getElementById('auth-container')) return;
+
+  const footerHtml = `<div id="auth-container" class="sidebar-auth-footer"></div>`;
+  sidebar.insertAdjacentHTML('beforeend', footerHtml);
+
+  initAuthUI({
+    containerId: 'auth-container',
+    onSyncComplete: async (syncResult) => {
+      // クラウド同期完了時に全データを再取得して画面を更新
+      await refreshAllData();
+      if (syncResult && syncResult.importedCount > 0) {
+        console.log(`[Main] クラウドから ${syncResult.importedCount} 件の思い出を復元しました。`);
+      }
+    }
+  });
+}
+
+/**
  * アプリケーションの初期化
  */
 async function bootstrap() {
@@ -109,7 +134,7 @@ async function bootstrap() {
     // 1. 地図の初期化
     const map = initMap('map');
 
-    // 2. データの取得または初期シード
+    // 2. データの取得または初期シード（ローカルファースト：即座に描画）
     const memories = await loadOrSeedMemories();
 
     // 3. マーカーのプロット
@@ -153,24 +178,43 @@ async function bootstrap() {
     // 7. ツアー＆フォトブックのアクションボタン設置
     setupHeaderActions(map);
 
-    // 8. 思い出記録モーダルの初期化とコールバック接続
+    // 8. 認証コンテナの設置とクラウド同期連携
+    setupAuthContainer();
+
+    // 9. 思い出記録モーダルの初期化とコールバック接続
     initMemoryModal({
       getFallbackLocation: () => {
         const center = map.getCenter();
         return { lat: center.lat, lng: center.lng };
       },
       onSave: async (savedMemory) => {
+        // 1. ローカル画面を即座に更新
         await refreshAllData();
         if (savedMemory && savedMemory.lat && savedMemory.lng) {
           flyToLocation(savedMemory.lat, savedMemory.lng, 14);
         }
+
+        // 2. ログイン中であればバックグラウンドでクラウドへ非同期反映
+        const user = getCurrentUser();
+        if (user) {
+          syncSingleMemoryToCloud(user, savedMemory).then(() => {
+            console.log('[Main] クラウドへバックアップ完了:', savedMemory.id);
+          }).catch(e => console.warn('[Main] クラウドバックアップ保留:', e));
+        }
       },
-      onDelete: async () => {
+      onDelete: async (deletedId) => {
+        // 1. ローカル画面を即座に更新
         await refreshAllData();
+
+        // 2. ログイン中であればクラウドからも非同期削除
+        const user = getCurrentUser();
+        if (user && deletedId) {
+          deleteCloudMemory(user, deletedId).catch(e => console.warn('[Main] クラウド削除保留:', e));
+        }
       }
     });
 
-    // 9. 地図上をクリックしたときに、その地点を初期位置として記録モーダルを開く
+    // 10. 地図上をクリックしたときに、その地点を初期位置として記録モーダルを開く
     map.on('click', (e) => {
       openCreateModal({
         lat: e.latlng.lat,
@@ -178,7 +222,7 @@ async function bootstrap() {
       });
     });
 
-    // 10. ポップアップ内のダブルクリックで編集モーダルを開く委譲サポート
+    // 11. ポップアップ内のダブルクリックで編集モーダルを開く委譲サポート
     document.addEventListener('dblclick', async (e) => {
       const popup = e.target.closest('.memory-popup-content');
       if (popup) {
