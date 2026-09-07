@@ -1,7 +1,8 @@
 /**
  * Memory Map - メインエントリーポイント
  * アプリのブートストラップ、スタイル読み込み、初期データシード、
- * 地図描画、思い出記録モーダル、およびサイドバー絞り込み検索の連携を行います。
+ * 地図描画、思い出記録モーダル、サイドバー絞り込み検索、
+ * アルバムツアー再生、およびフォトブック出力の統合管理を行います。
  */
 
 // スタイルのインポート
@@ -13,7 +14,12 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { initMap, renderMarkers, flyToLocation, getMap } from './map/map-manager';
 import { getAllMemories, saveMemory } from './services/storage';
 import { initMemoryModal, openCreateModal, openEditModal } from './components/memory-modal';
-import { initSidebar, updateSidebar } from './components/sidebar';
+import { initSidebar, updateSidebar, getFilterState } from './components/sidebar';
+import { startAlbumTour } from './components/tour-player';
+import { openPhotobookModal } from './components/photobook-modal';
+
+let allMemoriesCache = [];
+let currentFilteredMemories = [];
 
 /**
  * 初回起動時、データが空であれば動作確認用のサンプルデータを投入する
@@ -42,6 +48,8 @@ async function loadOrSeedMemories() {
     memories = [sampleMemory];
   }
 
+  allMemoriesCache = memories;
+  currentFilteredMemories = memories;
   return memories;
 }
 
@@ -51,9 +59,46 @@ async function loadOrSeedMemories() {
  */
 async function refreshAllData() {
   const memories = await getAllMemories();
+  allMemoriesCache = memories;
+  currentFilteredMemories = memories;
   renderMarkers(memories);
   updateSidebar(memories);
   return memories;
+}
+
+/**
+ * サイドバーヘッダーにツアー再生＆フォトブック出力ボタンを設置
+ */
+function setupHeaderActions(map) {
+  const header = document.querySelector('.sidebar-header');
+  if (!header || document.getElementById('sidebar-quick-actions')) return;
+
+  const actionsHtml = `
+    <div id="sidebar-quick-actions" style="display: flex; gap: 8px; margin-top: 10px;">
+      <button id="btn-quick-tour" style="flex: 1; padding: 7px 10px; background: #2563eb; color: white; border: none; border-radius: 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 8px rgba(37,99,235,0.25); transition: all 0.2s;">
+        ▶ ツアー再生
+      </button>
+      <button id="btn-quick-photobook" style="flex: 1; padding: 7px 10px; background: #f1f5f9; color: #0f172a; border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s;">
+        📖 旅のフォトブック
+      </button>
+    </div>
+  `;
+
+  header.insertAdjacentHTML('beforeend', actionsHtml);
+
+  // ツアー再生イベント
+  document.getElementById('btn-quick-tour')?.addEventListener('click', () => {
+    const targets = currentFilteredMemories.length > 0 ? currentFilteredMemories : allMemoriesCache;
+    startAlbumTour(targets, map);
+  });
+
+  // フォトブック出力イベント
+  document.getElementById('btn-quick-photobook')?.addEventListener('click', () => {
+    const filterState = getFilterState();
+    const currentAlbum = filterState.selectedAlbum || '旅の記録';
+    const targets = currentFilteredMemories.length > 0 ? currentFilteredMemories : allMemoriesCache;
+    openPhotobookModal(currentAlbum, targets);
+  });
 }
 
 /**
@@ -79,11 +124,11 @@ async function bootstrap() {
     initSidebar({
       containerId: 'sidebar-content',
       onFilterChange: (filteredMemories) => {
-        // 絞り込まれた思い出のみを地図上に再描画
+        currentFilteredMemories = filteredMemories;
         renderMarkers(filteredMemories);
       },
       onAlbumSelect: (albumName, albumMemories) => {
-        // アルバムが選択されたら、そのアルバム内のピン全体が見えるようカメラを調整
+        currentFilteredMemories = albumMemories;
         if (albumMemories && albumMemories.length > 0) {
           const latlngs = albumMemories
             .filter(m => typeof m.lat === 'number' && typeof m.lng === 'number')
@@ -102,10 +147,13 @@ async function bootstrap() {
       }
     });
 
-    // 6. サイドバーに思い出データを反映して集計表示
+    // 6. サイドバーに思い出データを反映
     updateSidebar(memories);
 
-    // 7. 思い出記録モーダルの初期化とコールバック接続
+    // 7. ツアー＆フォトブックのアクションボタン設置
+    setupHeaderActions(map);
+
+    // 8. 思い出記録モーダルの初期化とコールバック接続
     initMemoryModal({
       getFallbackLocation: () => {
         const center = map.getCenter();
@@ -122,7 +170,7 @@ async function bootstrap() {
       }
     });
 
-    // 8. 地図上をクリックしたときに、その地点を初期位置として記録モーダルを開く
+    // 9. 地図上をクリックしたときに、その地点を初期位置として記録モーダルを開く
     map.on('click', (e) => {
       openCreateModal({
         lat: e.latlng.lat,
@@ -130,7 +178,7 @@ async function bootstrap() {
       });
     });
 
-    // 9. ポップアップ内のダブルクリックで編集モーダルを開く委譲サポート
+    // 10. ポップアップ内のダブルクリックで編集モーダルを開く委譲サポート
     document.addEventListener('dblclick', async (e) => {
       const popup = e.target.closest('.memory-popup-content');
       if (popup) {
