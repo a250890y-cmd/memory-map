@@ -4,8 +4,14 @@
  * 条件変更時に地図上のピンを動的に絞り込みます。
  */
 
+import { getHomeLocation, saveHomeLocation, clearHomeLocation } from '../services/storage';
+import { setHomeMarker, flyToLocation, getMap, drawRouteLine } from '../map/map-manager';
+
 let sidebarContainer = null;
 let memoriesData = [];
+let homeLocationState = null;
+let isSettingHomeFromMap = false;
+
 let filterState = {
   searchQuery: '',
   selectedYear: '',
@@ -135,6 +141,59 @@ function renderSidebarUI() {
           </svg>
         </button>
       ` : ''}
+    </div>
+
+    <!-- 拠点・自宅設定 -->
+    <div class="sidebar-group">
+      <div class="sidebar-group-header">
+        <span class="sidebar-group-title" style="display: flex; align-items: center; gap: 5px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          </svg>
+          <span>拠点・自宅</span>
+        </span>
+        ${homeLocationState ? '<button id="btn-sidebar-clear-home" class="btn-filter-reset">解除</button>' : ''}
+      </div>
+
+      <div style="background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(0, 0, 0, 0.06); border-radius: 14px; padding: 10px 12px;">
+        ${isSettingHomeFromMap ? `
+          <div style="color: #2563eb; font-size: 0.78rem; font-weight: 600; line-height: 1.4; display: flex; align-items: center; gap: 6px;">
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #2563eb; animation: pulse 1.5s infinite;"></span>
+            <span>地図上の自宅にしたい場所をクリックしてください</span>
+          </div>
+        ` : homeLocationState ? `
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; color: #0f172a; font-size: 0.82rem;">
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+              <span>${homeLocationState.name || '自宅'}</span>
+            </div>
+            <span style="font-size: 0.72rem; color: #94a3b8;">${homeLocationState.lat.toFixed(3)}, ${homeLocationState.lng.toFixed(3)}</span>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button id="btn-sidebar-fly-home" style="flex: 1; padding: 6px 10px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 0.76rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 6px rgba(37,99,235,0.25); transition: all 0.2s;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+              <span>自宅へ移動</span>
+            </button>
+            <button id="btn-sidebar-change-home" style="padding: 6px 10px; background: #f1f5f9; color: #475569; border: 1px solid rgba(0,0,0,0.06); border-radius: 8px; font-size: 0.76rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+              変更
+            </button>
+          </div>
+        ` : `
+          <div style="color: #64748b; font-size: 0.76rem; margin-bottom: 8px; line-height: 1.4;">
+            自宅を設定すると、旅のルート探索時に出発地・帰着点として自動反映されます。
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button id="btn-sidebar-set-home-map" style="flex: 1; padding: 6px 10px; background: #f8fafc; color: #2563eb; border: 1px solid rgba(37,99,235,0.2); border-radius: 8px; font-size: 0.76rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 8 12 12 14 14"></polyline></svg>
+              <span>地図から指定</span>
+            </button>
+            <button id="btn-sidebar-set-home-current" style="flex: 1; padding: 6px 10px; background: #f1f5f9; color: #0f172a; border: 1px solid rgba(0,0,0,0.06); border-radius: 8px; font-size: 0.76rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+              <span>現在地を設定</span>
+            </button>
+          </div>
+        `}
+      </div>
     </div>
 
     <!-- 年別フィルター -->
@@ -297,6 +356,137 @@ function bindSidebarEvents(albumsMap) {
       applyFilters();
     });
   }
+
+  // 自宅操作イベントのバインド
+  const btnClearHome = document.getElementById('btn-sidebar-clear-home');
+  if (btnClearHome) {
+    btnClearHome.addEventListener('click', handleClearHome);
+  }
+
+  const btnFlyHome = document.getElementById('btn-sidebar-fly-home');
+  if (btnFlyHome) {
+    btnFlyHome.addEventListener('click', handleFlyToHome);
+  }
+
+  const btnChangeHome = document.getElementById('btn-sidebar-change-home');
+  if (btnChangeHome) {
+    btnChangeHome.addEventListener('click', startMapPickHome);
+  }
+
+  const btnSetHomeMap = document.getElementById('btn-sidebar-set-home-map');
+  if (btnSetHomeMap) {
+    btnSetHomeMap.addEventListener('click', startMapPickHome);
+  }
+
+  const btnSetHomeCurrent = document.getElementById('btn-sidebar-set-home-current');
+  if (btnSetHomeCurrent) {
+    btnSetHomeCurrent.addEventListener('click', setCurrentLocationAsHome);
+  }
+}
+
+/**
+ * 地図をクリックして自宅を設定するフロー
+ */
+function startMapPickHome() {
+  const map = getMap();
+  const mapEl = document.getElementById('map');
+  if (!map) return;
+
+  isSettingHomeFromMap = true;
+  if (mapEl) mapEl.style.cursor = 'crosshair';
+  renderSidebarUI();
+
+  map.once('click', async (e) => {
+    if (mapEl) mapEl.style.cursor = '';
+    isSettingHomeFromMap = false;
+
+    const lat = e.latlng.lat;
+    const lng = e.latlng.lng;
+    const newHome = { lat, lng, name: '自宅' };
+
+    try {
+      await saveHomeLocation(newHome);
+      homeLocationState = newHome;
+      setHomeMarker(homeLocationState, { onClear: handleClearHome });
+      renderSidebarUI();
+
+      // アルバム選択中の場合はルート探索を再実行
+      if (filterState.selectedAlbum) {
+        const albumMemories = memoriesData.filter(m => (m.album || '') === filterState.selectedAlbum);
+        drawRouteLine(albumMemories);
+      }
+    } catch (err) {
+      console.error('自宅設定の保存エラー:', err);
+      alert('自宅設定の保存に失敗しました: ' + err.message);
+    }
+  });
+}
+
+/**
+ * 現在地を自宅として設定するフロー
+ */
+function setCurrentLocationAsHome() {
+  if (!navigator.geolocation) {
+    alert('お使いのブラウザは現在地取得に対応していません。');
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      const newHome = { lat, lng, name: '自宅' };
+
+      try {
+        await saveHomeLocation(newHome);
+        homeLocationState = newHome;
+        setHomeMarker(homeLocationState, { onClear: handleClearHome });
+        flyToLocation(lat, lng, 15);
+        renderSidebarUI();
+
+        if (filterState.selectedAlbum) {
+          const albumMemories = memoriesData.filter(m => (m.album || '') === filterState.selectedAlbum);
+          drawRouteLine(albumMemories);
+        }
+      } catch (err) {
+        console.error('現在地からの自宅設定エラー:', err);
+        alert('自宅設定の保存に失敗しました: ' + err.message);
+      }
+    },
+    (err) => {
+      console.warn('現在地取得失敗:', err);
+      alert('現在地を取得できませんでした。ブラウザの位置情報パーミッションをご確認ください。');
+    },
+    { enableHighAccuracy: true, timeout: 8000 }
+  );
+}
+
+/**
+ * 自宅設定を解除
+ */
+async function handleClearHome() {
+  try {
+    await clearHomeLocation();
+    homeLocationState = null;
+    setHomeMarker(null);
+    renderSidebarUI();
+
+    if (filterState.selectedAlbum) {
+      const albumMemories = memoriesData.filter(m => (m.album || '') === filterState.selectedAlbum);
+      drawRouteLine(albumMemories);
+    }
+  } catch (err) {
+    console.error('自宅設定解除エラー:', err);
+  }
+}
+
+/**
+ * 自宅へカメラ移動
+ */
+function handleFlyToHome() {
+  if (homeLocationState && typeof homeLocationState.lat === 'number' && typeof homeLocationState.lng === 'number') {
+    flyToLocation(homeLocationState.lat, homeLocationState.lng, 15);
+  }
 }
 
 /**
@@ -306,11 +496,24 @@ function bindSidebarEvents(albumsMap) {
  * @param {Function} [options.onFilterChange] (filteredMemories, filterState) => void
  * @param {Function} [options.onAlbumSelect] (albumName, albumMemories) => void
  */
-export function initSidebar(options = {}) {
+export async function initSidebar(options = {}) {
   const containerId = options.containerId || 'sidebar-content';
   sidebarContainer = document.getElementById(containerId);
   callbacks.onFilterChange = options.onFilterChange || null;
   callbacks.onAlbumSelect = options.onAlbumSelect || null;
+
+  // 自宅設定のロードと初期ピン描画
+  try {
+    homeLocationState = await getHomeLocation();
+    if (homeLocationState) {
+      setHomeMarker(homeLocationState, { onClear: handleClearHome });
+    }
+  } catch (err) {
+    console.warn('自宅初期ロードに失敗しました:', err);
+  }
+
+  // ポップアップからの解除通知をリッスン
+  window.addEventListener('memorymap:home-cleared', handleClearHome);
 }
 
 /**

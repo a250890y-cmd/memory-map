@@ -12,6 +12,8 @@ let clusterGroup = null;
 let routeLayers = null;
 let currentRouteRequestId = 0;
 let currentAbortController = null;
+let homeMarkerInstance = null;
+let currentHomeCoords = null;
 
 // Google Maps タイルレイヤー設定
 const GOOGLE_MAPS_CONFIG = {
@@ -74,6 +76,97 @@ export function flyToLocation(lat, lng, zoom = 13) {
       duration: 1.2
     });
   }
+}
+
+/**
+ * 現在の自宅座標を取得
+ * @returns {Object|null}
+ */
+export function getHomeMarkerCoords() {
+  return currentHomeCoords ? { ...currentHomeCoords } : null;
+}
+
+/**
+ * 地図上に特別な自宅ピンを描画・更新・消去
+ * @param {Object|null} coords { lat: number, lng: number, name?: string }
+ * @param {Object} [options]
+ * @param {Function} [options.onClear] 自宅解除コールバック
+ */
+export function setHomeMarker(coords, options = {}) {
+  if (!coords || typeof coords.lat !== 'number' || typeof coords.lng !== 'number') {
+    if (homeMarkerInstance && mapInstance) {
+      mapInstance.removeLayer(homeMarkerInstance);
+    }
+    homeMarkerInstance = null;
+    currentHomeCoords = null;
+    return;
+  }
+
+  currentHomeCoords = {
+    lat: coords.lat,
+    lng: coords.lng,
+    name: coords.name || '自宅'
+  };
+
+  if (!mapInstance) return;
+
+  if (homeMarkerInstance) {
+    mapInstance.removeLayer(homeMarkerInstance);
+    homeMarkerInstance = null;
+  }
+
+  // スタイリッシュな自宅ピン（家アイコンSVG入り）
+  const homeIcon = L.divIcon({
+    className: 'home-marker-div-icon',
+    html: `
+      <div style="position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <svg width="34" height="44" viewBox="0 0 44 58" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.4));">
+          <path d="M 22 2 C 10.95 2 2 10.95 2 22 C 2 37 22 56 22 56 C 22 56 42 37 42 22 C 42 10.95 33.05 2 22 2 Z" fill="#0f172a" stroke="#ffffff" stroke-width="2.5"/>
+          <path d="M 13 25 L 22 16 L 31 25 V 34 A 2 2 0 0 1 29 36 H 15 A 2 2 0 0 1 13 34 Z" fill="#ffffff"/>
+          <path d="M 19 36 V 28 H 25 V 36 Z" fill="#0f172a"/>
+        </svg>
+      </div>
+    `,
+    iconSize: [34, 44],
+    iconAnchor: [17, 44],
+    popupAnchor: [0, -46]
+  });
+
+  homeMarkerInstance = L.marker([coords.lat, coords.lng], {
+    icon: homeIcon,
+    zIndexOffset: 1000 // 他の思い出ピンより前面に表示
+  }).addTo(mapInstance);
+
+  const popupHtml = `
+    <div style="text-align: center; padding: 4px 6px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 5px; font-weight: 700; color: #0f172a; margin-bottom: 2px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        </svg>
+        <span>${currentHomeCoords.name}</span>
+      </div>
+      <div style="font-size: 0.72rem; color: #64748b; margin-bottom: 8px;">旅の出発地・帰着拠点</div>
+      <button id="btn-popup-clear-home" style="padding: 4px 10px; font-size: 0.72rem; background: #fee2e2; color: #dc2626; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; transition: background 0.2s;">
+        自宅設定を解除
+      </button>
+    </div>
+  `;
+
+  homeMarkerInstance.bindPopup(popupHtml);
+
+  homeMarkerInstance.on('popupopen', () => {
+    const btn = document.getElementById('btn-popup-clear-home');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        setHomeMarker(null);
+        if (typeof options.onClear === 'function') {
+          options.onClear();
+        }
+        // カスタムイベントの発行で UI 側へも通知
+        window.dispatchEvent(new CustomEvent('memorymap:home-cleared'));
+      });
+    }
+  });
 }
 
 /**
@@ -171,6 +264,12 @@ export async function drawRouteLine(memories = []) {
   const latlngs = sorted
     .filter(m => typeof m.lat === 'number' && typeof m.lng === 'number' && !isNaN(m.lat) && !isNaN(m.lng))
     .map(m => [m.lat, m.lng]);
+
+  // 自宅が設定されている場合、旅の出発点および帰着点として自宅座標を付加
+  if (currentHomeCoords && typeof currentHomeCoords.lat === 'number' && typeof currentHomeCoords.lng === 'number') {
+    latlngs.unshift([currentHomeCoords.lat, currentHomeCoords.lng]);
+    latlngs.push([currentHomeCoords.lat, currentHomeCoords.lng]);
+  }
 
   if (latlngs.length < 2) return;
 

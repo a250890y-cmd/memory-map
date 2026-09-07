@@ -189,3 +189,70 @@ export async function saveAppSettings(settingsData) {
   });
   await db.put(SETTINGS_STORE, merged, 'app_settings');
 }
+
+/**
+ * 自宅座標を取得
+ * IndexedDB の settings から取得し、未設定時は legacy な localStorage からの移行も行います。
+ * @returns {Promise<Object|null>} { lat, lng, name }
+ */
+export async function getHomeLocation() {
+  try {
+    const settings = await getAppSettings();
+    if (settings && settings.homeLocation && typeof settings.homeLocation.lat === 'number' && typeof settings.homeLocation.lng === 'number') {
+      return settings.homeLocation;
+    }
+    // reference (旧仕様) の localStorage 互換フォールバック
+    const legacy = localStorage.getItem('homeLocation');
+    if (legacy) {
+      try {
+        const parsed = JSON.parse(legacy);
+        if (parsed && typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+          const migrated = {
+            lat: parsed.lat,
+            lng: parsed.lng,
+            name: parsed.name || '自宅'
+          };
+          await saveHomeLocation(migrated);
+          return migrated;
+        }
+      } catch (_) {}
+    }
+    return null;
+  } catch (error) {
+    console.error('getHomeLocation 取得エラー:', error);
+    return null;
+  }
+}
+
+/**
+ * 自宅座標を保存
+ * @param {Object} location { lat: number, lng: number, name?: string }
+ * @returns {Promise<void>}
+ */
+export async function saveHomeLocation(location) {
+  if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number') {
+    throw new Error('無効な自宅位置データです。lat と lng を数値で指定してください。');
+  }
+  const homeData = {
+    lat: location.lat,
+    lng: location.lng,
+    name: location.name || '自宅'
+  };
+  await saveAppSettings({ homeLocation: homeData });
+
+  // reference 互換性のため localStorage にも保存
+  try {
+    localStorage.setItem('homeLocation', JSON.stringify(homeData));
+  } catch (_) {}
+}
+
+/**
+ * 自宅座標を削除
+ * @returns {Promise<void>}
+ */
+export async function clearHomeLocation() {
+  await saveAppSettings({ homeLocation: null });
+  try {
+    localStorage.removeItem('homeLocation');
+  } catch (_) {}
+}
