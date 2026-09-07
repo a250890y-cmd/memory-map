@@ -1182,3 +1182,272 @@
   color: #0f172a;
 }
 
+/* --------------------------------------------------------------------------
+   モバイルファースト レスポンシブ最適化 (@media (max-width: 768px))
+   -------------------------------------------------------------------------- */
+
+/* PC時は非表示のスマホ専用要素 */
+.sidebar-backdrop {
+  display: none;
+}
+
+.btn-hamburger {
+  display: none;
+}
+
+.sidebar-btn-close {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* ------------------------------
+     1. ドロワーサイドバー & 暗転オーバーレイ
+     ------------------------------ */
+  .sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: min(84vw, 320px) !important;
+    height: 100% !important;
+    height: 100dvh !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    z-index: 3000 !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25) !important;
+    background: rgba(255, 255, 255, 0.98) !important;
+  }
+
+  .sidebar.open {
+    transform: translateX(0) !important;
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 2990;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .sidebar-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .sidebar-header {
+    padding: calc(1rem + env(safe-area-inset-top, 0px)) 1.2rem 1rem 1.2rem !important;
+  }
+
+  .sidebar-header-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .sidebar-btn-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.05);
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .sidebar-btn-close:active {
+    background: rgba(0, 0, 0, 0.12);
+    color: #0f172a;
+    transform: scale(0.94);
+  }
+
+  .sidebar-content {
+    padding: 1rem 1.2rem calc(1rem + env(safe-area-inset-bottom, 0px)) 1.2rem !important;
+  }
+
+  /* ------------------------------
+     2. モバイルコントロール配置
+     ------------------------------ */
+  /* 左上ハンバーガーメニューボタン */
+  .btn-hamburger {
+    display: flex;
+    position: fixed;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    left: 12px;
+    z-index: 2500;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #0f172a;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn-hamburger:active {
+    transform: scale(0.92);
+    background: rgba(241, 245, 249, 0.98);
+  }
+
+  /* 右上検索バーの伸縮最適化 */
+  .map-search-container {
+    margin-top: calc(12px + env(safe-area-inset-top, 0px)) !important;
+    margin-right: 12px !important;
+  }
+
+  .map-search-bar {
+    width: calc(100vw - 80px) !important;
+    max-width: calc(100vw - 80px) !important;
+    padding: 6px 10px;
+    height: 44px;
+    box-sizing: border-box;
+  }
+
+  .map-search-bar:focus-within {
+    width: calc(100vw - 80px) !important;
+    max-width: calc(100vw - 80px) !important;
+  }
+
+  /* 右下コントロール（GPS & ズームボタン） */
+  .leaflet-bottom.leaflet-right {
+    margin-bottom: calc(82px + env(safe-area-inset-bottom, 0px)) !important;
+    margin-right: 12px !important;
+  }
+
+  .map-gps-btn {
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 44px;
+    min-height: 44px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  .leaflet-control-zoom {
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+  }
+
+  .leaflet-control-zoom a {
+    width: 44px !important;
+    height: 44px !important;
+    line-height: 44px !important;
+    font-size: 20px !important;
+  }
+
+  /* 下部中央の「ここで記録」ボタン (FAB) */
+  .center-bottom-container {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    width: auto;
+  }
+
+  .fab-record-btn {
+    padding: 12px 24px !important;
+    font-size: 0.95rem !important;
+    min-height: 46px !important;
+    box-shadow: 0 8px 24px -2px rgba(37, 99, 235, 0.5) !important;
+  }
+
+  /* ------------------------------
+     3. Leaflet ポップアップのモバイル最適化
+     ------------------------------ */
+  .custom-memory-popup .leaflet-popup-content-wrapper {
+    max-width: calc(100vw - 32px) !important;
+    margin: 0 auto !important;
+    border-radius: 16px !important;
+  }
+
+  .custom-memory-popup .leaflet-popup-content {
+    margin: 10px 12px !important;
+  }
+
+  .memory-popup-content {
+    min-width: unset !important;
+    max-width: calc(100vw - 56px) !important;
+  }
+
+  .memory-popup-image-box {
+    height: 125px !important;
+  }
+
+  /* ------------------------------
+     4. 記録・編集モーダルのボトムシート化
+     ------------------------------ */
+  .modal-overlay {
+    padding: 0 !important;
+    align-items: flex-end !important;
+  }
+
+  .modal-card {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 90vh !important;
+    max-height: 90dvh !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-top-left-radius: 20px !important;
+    border-top-right-radius: 20px !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25) !important;
+    transform: translateY(0) !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  .modal-overlay.hidden .modal-card {
+    transform: translateY(100%) !important;
+  }
+
+  .modal-header {
+    padding: 1rem 1.25rem !important;
+    position: sticky !important;
+    top: 0 !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    z-index: 10 !important;
+  }
+
+  .modal-body {
+    padding: 1rem 1.25rem !important;
+    padding-bottom: 2rem !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-footer {
+    padding: 0.85rem 1.25rem !important;
+    padding-bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px)) !important;
+    position: sticky !important;
+    bottom: 0 !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    z-index: 10 !important;
+  }
+
+  .form-row {
+    flex-direction: column !important;
+    gap: 0 !important;
+  }
+}
+

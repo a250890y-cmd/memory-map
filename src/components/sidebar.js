@@ -327,6 +327,9 @@ function bindSidebarEvents(albumsMap) {
       if (album && albumsMap[album] && typeof callbacks.onAlbumSelect === 'function') {
         callbacks.onAlbumSelect(album, albumsMap[album].memories);
       }
+
+      // スマホ表示時は地図を見やすくするためサイドバーを自動クローズ
+      closeSidebarIfMobile();
     });
   });
 
@@ -345,6 +348,9 @@ function bindSidebarEvents(albumsMap) {
       filterState.selectedTag = btn.getAttribute('data-tag') || '';
       renderSidebarUI();
       applyFilters();
+
+      // スマホ表示時は地図を見やすくするためサイドバーを自動クローズ
+      closeSidebarIfMobile();
     });
   });
 
@@ -512,8 +518,44 @@ export async function initSidebar(options = {}) {
     console.warn('自宅初期ロードに失敗しました:', err);
   }
 
+  // スマホ用閉じるボタンをヘッダーに配置
+  setupSidebarHeader();
+
   // ポップアップからの解除通知をリッスン
   window.addEventListener('memorymap:home-cleared', handleClearHome);
+}
+
+/**
+ * スマホ用サイドバー閉じるボタン（SVGクロス）をヘッダー右上に配置
+ */
+function setupSidebarHeader() {
+  const header = document.querySelector('.sidebar-header');
+  if (!header || document.getElementById('btn-sidebar-close')) return;
+
+  const closeBtnHtml = `
+    <button id="btn-sidebar-close" class="sidebar-btn-close" type="button" aria-label="サイドバーを閉じる" title="閉じる">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  `;
+
+  const h2 = header.querySelector('h2');
+  if (h2) {
+    const topRow = document.createElement('div');
+    topRow.className = 'sidebar-header-top-row';
+    h2.parentNode.insertBefore(topRow, h2);
+    topRow.appendChild(h2);
+    topRow.insertAdjacentHTML('beforeend', closeBtnHtml);
+  } else {
+    header.insertAdjacentHTML('afterbegin', closeBtnHtml);
+  }
+
+  document.getElementById('btn-sidebar-close')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeSidebar();
+  });
 }
 
 /**
@@ -530,4 +572,45 @@ export function updateSidebar(memories = []) {
  */
 export function getFilterState() {
   return { ...filterState };
+}
+
+/**
+ * サイドバーを開く
+ */
+export function openSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (sidebar) sidebar.classList.add('open');
+  if (backdrop) backdrop.classList.add('open');
+}
+
+/**
+ * サイドバーを閉じる
+ */
+export function closeSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (sidebar) sidebar.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+}
+
+/**
+ * サイドバーの開閉をトグル
+ */
+export function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar && sidebar.classList.contains('open')) {
+    closeSidebar();
+  } else {
+    openSidebar();
+  }
+}
+
+/**
+ * スマホ表示（画面幅 768px 以下）の場合にサイドバーを閉じる
+ */
+export function closeSidebarIfMobile() {
+  if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+    closeSidebar();
+  }
 }

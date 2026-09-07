@@ -14,7 +14,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { initMap, renderMarkers, flyToLocation, getMap, drawRouteLine, clearRouteLine } from './map/map-manager';
 import { getAllMemories, saveMemory, deleteMemory } from './services/storage';
 import { initMemoryModal, openCreateModal, openEditModal, openMemoryModal } from './components/memory-modal';
-import { initSidebar, updateSidebar, getFilterState } from './components/sidebar';
+import { initSidebar, updateSidebar, getFilterState, toggleSidebar, closeSidebar, closeSidebarIfMobile } from './components/sidebar';
 import { startAlbumTour } from './components/tour-player';
 import { openPhotobookModal } from './components/photobook-modal';
 import { initAuthUI } from './components/auth-button';
@@ -137,17 +137,68 @@ function setupHeaderActions(map) {
 
   // ツアー再生イベント
   document.getElementById('btn-quick-tour')?.addEventListener('click', () => {
+    closeSidebarIfMobile();
     const targets = currentFilteredMemories.length > 0 ? currentFilteredMemories : allMemoriesCache;
     startAlbumTour(targets, map);
   });
 
   // フォトブック出力イベント
   document.getElementById('btn-quick-photobook')?.addEventListener('click', () => {
+    closeSidebarIfMobile();
     const filterState = getFilterState();
     const currentAlbum = filterState.selectedAlbum || '旅の記録';
     const targets = currentFilteredMemories.length > 0 ? currentFilteredMemories : allMemoriesCache;
     openPhotobookModal(currentAlbum, targets);
   });
+}
+
+/**
+ * スマホ用UI（左上ハンバーガーメニュー、サイドバー暗転オーバーレイ）の設置とイベント登録
+ */
+function setupMobileControls() {
+  // 1. 暗転オーバーレイ
+  if (!document.getElementById('sidebar-backdrop')) {
+    const backdrop = document.createElement('div');
+    backdrop.id = 'sidebar-backdrop';
+    backdrop.className = 'sidebar-backdrop';
+    document.body.appendChild(backdrop);
+
+    backdrop.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeSidebar();
+    });
+    backdrop.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+    }, { passive: true });
+  }
+
+  // 2. 左上ハンバーガーボタン
+  if (!document.getElementById('btn-hamburger')) {
+    const btnHamburger = document.createElement('button');
+    btnHamburger.id = 'btn-hamburger';
+    btnHamburger.className = 'btn-hamburger';
+    btnHamburger.type = 'button';
+    btnHamburger.setAttribute('aria-label', 'メニューを開く');
+    btnHamburger.setAttribute('title', 'メニュー');
+    btnHamburger.innerHTML = `
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="4" y1="6" x2="20" y2="6"></line>
+        <line x1="4" y1="12" x2="20" y2="12"></line>
+        <line x1="4" y1="18" x2="20" y2="18"></line>
+      </svg>
+    `;
+
+    btnHamburger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleSidebar();
+    });
+
+    btnHamburger.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+    }, { passive: true });
+
+    document.body.appendChild(btnHamburger);
+  }
 }
 
 /**
@@ -177,6 +228,9 @@ function setupAuthContainer() {
  */
 async function bootstrap() {
   try {
+    // 0. スマホ用UI（ハンバーガーボタン、暗転オーバーレイ）の初期化
+    setupMobileControls();
+
     // 1. 地図の初期化
     const map = initMap('map');
 
