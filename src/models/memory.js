@@ -1,6 +1,7 @@
 /**
  * Memory Map - データモデル定義
  * アーキテクトの設計に基づき、思い出データおよびアプリ設定の構造・ファクトリを提供します。
+ * ハイブリッド同期に対応するため、syncStatus ('synced' | 'pending') をサポートします。
  */
 
 /**
@@ -32,7 +33,9 @@ export function createMemory(data = {}) {
       : [],
     imageUrls: Array.isArray(data.imageUrls)
       ? data.imageUrls
-      : (data.imageUrl ? [data.imageUrl] : [])
+      : (data.imageUrl ? [data.imageUrl] : []),
+    // ハイブリッド同期用ステータス ('synced': クラウド同期済, 'pending': 未同期・ローカル優先)
+    syncStatus: data.syncStatus === 'synced' ? 'synced' : 'pending'
   };
 }
 

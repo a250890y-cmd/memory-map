@@ -1,6 +1,7 @@
 /**
  * Memory Map - ローカルファースト ストレージサービス
  * idb (IndexedDB) を使用し、未ログイン環境でもブラウザ内で安全に思い出データの永続化を行います。
+ * ハイブリッド同期に対応したバッチ保存（saveMemoriesBatch）や upsert 処理を提供します。
  */
 
 import { openDB } from 'idb';
@@ -17,14 +18,11 @@ const SETTINGS_STORE = 'settings';
 async function getDB() {
   return openDB(DB_NAME, DB_VERSION, {
     upgrade(db) {
-      // 思い出ストアの作成
       if (!db.objectStoreNames.contains(MEMORIES_STORE)) {
         const memoryStore = db.createObjectStore(MEMORIES_STORE, { keyPath: 'id' });
         memoryStore.createIndex('timestamp', 'timestamp');
         memoryStore.createIndex('album', 'album');
       }
-
-      // アプリ設定ストアの作成
       if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
         db.createObjectStore(SETTINGS_STORE);
       }
@@ -41,7 +39,6 @@ export async function getAllMemories() {
     const db = await getDB();
     const all = await db.getAll(MEMORIES_STORE);
 
-    // 日時またはタイムスタンプ順にソート（古い順）
     return all.sort((a, b) => {
       const timeA = new Date(a.datetime || a.timestamp || 0).getTime();
       const timeB = new Date(b.datetime || b.timestamp || 0).getTime();
@@ -87,6 +84,47 @@ export async function saveMemory(memoryData) {
 }
 
 /**
+ * 既存の思い出を挿入または更新 (Upsert)
+ * クラウド同期時にIDを維持して安全に上書き保存します。
+ * @param {Object} memoryData 
+ * @returns {Promise<string>}
+ */
+export async function upsertMemory(memoryData) {
+  const memory = createMemory(memoryData);
+  if (!isValidMemory(memory)) {
+    throw new Error('無効な思い出データです。');
+  }
+
+  const db = await getDB();
+  await db.put(MEMORIES_STORE, memory);
+  return memory.id;
+}
+
+/**
+ * 複数の思い出を一括で保存・マージ（バッチ登録）
+ * @param {Array<Object>} memoriesList 
+ * @returns {Promise<number>} 保存された件数
+ */
+export async function saveMemoriesBatch(memoriesList = []) {
+  if (!Array.isArray(memoriesList) || memoriesList.length === 0) return 0;
+
+  const db = await getDB();
+  const tx = db.transaction(MEMORIES_STORE, 'readwrite');
+  let count = 0;
+
+  for (const item of memoriesList) {
+    const memory = createMemory(item);
+    if (isValidMemory(memory)) {
+      await tx.store.put(memory);
+      count++;
+    }
+  }
+
+  await tx.done;
+  return count;
+}
+
+/**
  * 既存の思い出を更新
  * @param {Object} memoryData 
  * @returns {Promise<void>}
@@ -100,7 +138,7 @@ export async function updateMemory(memoryData) {
   const updated = createMemory({
     ...(existing || {}),
     ...memoryData,
-    timestamp: new Date().toISOString() // 更新時刻を反映
+    timestamp: new Date().toISOString()
   });
 
   if (!isValidMemory(updated)) {
