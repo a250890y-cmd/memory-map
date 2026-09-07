@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+    <title>Memory Map - あなたの旅の記録</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: #f8fafc;
+        color: #0f172a;
+        overflow: hidden;
+        width: 100vw;
+        height: 100vh;
+      }
+      #app {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
+      /* サイドバー領域（セマンティック構造） */
+      .sidebar {
+        width: 320px;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(12px);
+        border-right: 1px solid rgba(0, 0, 0, 0.08);
+        display: flex;
+        flex-direction: column;
+        z-index: 1000;
+        transition: transform 0.3s ease;
+      }
+      /* 地図メイン領域 */
+      .map-container {
+        flex: 1;
+        height: 100%;
+        position: relative;
+      }
+      #map {
+        width: 100%;
+        height: 100%;
+        background: #e2e8f0;
+      }
+      /* 初期プレースホルダー表示 */
+      .init-notice {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        background: white;
+        padding: 24px 32px;
+        border-radius: 16px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.06);
+        z-index: 500;
+      }
+      .init-notice h1 {
+        font-size: 1.25rem;
+        margin-bottom: 8px;
+        color: #2563eb;
+      }
+      .init-notice p {
+        font-size: 0.88rem;
+        color: #64748b;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <!-- サイドバー（アルバム一覧・検索・フィルター） -->
+      <aside id="sidebar" class="sidebar">
+        <header class="sidebar-header" style="padding: 1.2rem; border-bottom: 1px solid rgba(0,0,0,0.06);">
+          <h2 style="font-size: 1.1rem; font-weight: 700; color: #0f172a;">Memory Map</h2>
+        </header>
+        <section id="sidebar-content" class="sidebar-content" style="flex: 1; padding: 1.2rem; overflow-y: auto;">
+          <!-- アルバムやタグ等のUIが今後のステップで配置されます -->
+        </section>
+      </aside>
+
+      <!-- メイン地図領域 -->
+      <main class="map-container">
+        <div id="map"></div>
+        <div id="init-placeholder" class="init-notice">
+          <h1>Memory Map 基盤準備完了</h1>
+          <p>Step 1 の環境整備が完了しました。今後のステップで地図とデータモジュールが接続されます。</p>
+        </div>
+      </main>
+    </div>
+
+    <!-- モーダル用ポータルコンテナ -->
+    <div id="modal-container"></div>
+
+    <!-- 今後のステップでモジュール化された main.js をマウントします -->
+    <script type="module">
+      console.log("Memory Map base system initialized successfully.");
+    </script>
+  </body>
+</html>
