@@ -20,7 +20,7 @@ import { openPhotobookModal } from './components/photobook-modal';
 import { initAuthUI } from './components/auth-button';
 import { getCurrentUser } from './services/auth-service';
 import { syncSingleMemoryToCloud, deleteCloudMemory } from './services/cloud-sync';
-import { openAlbumListModal } from './components/album-modal';
+import { openAlbumListModal, updateAlbumModalMemories } from './components/album-modal';
 
 let allMemoriesCache = [];
 let currentFilteredMemories = [];
@@ -135,12 +135,16 @@ async function handleUpdateAlbum(oldAlbumName, newAlbumName, coverPhotoUrl) {
   targetMemories.forEach(mem => {
     const updated = {
       ...mem,
-      album: trimmedNew,
-      albumCoverPhoto: coverPhotoUrl,
-      coverPhoto: coverPhotoUrl
+      album: trimmedNew
     };
 
-    // カバー写真の指定があり、その思い出の写真リストに含まれる場合は先頭に並び替えてフラグ設定
+    // 渡された coverPhotoUrl が存在する場合、該当アルバムに属する全思い出オブジェクトに対して albumCoverPhoto = coverPhotoUrl をセット
+    if (coverPhotoUrl) {
+      updated.albumCoverPhoto = coverPhotoUrl;
+      updated.coverPhoto = coverPhotoUrl;
+    }
+
+    // 選ばれた写真を持つ思い出の imageUrls 配列の先頭にその写真を移動させてフラグ設定
     if (coverPhotoUrl && Array.isArray(updated.imageUrls) && updated.imageUrls.includes(coverPhotoUrl)) {
       updated.imageUrls = [coverPhotoUrl, ...updated.imageUrls.filter(u => u !== coverPhotoUrl)];
       updated.isCoverPhoto = true;
@@ -151,7 +155,7 @@ async function handleUpdateAlbum(oldAlbumName, newAlbumName, coverPhotoUrl) {
     updatedMemories.push(updated);
   });
 
-  // 2. IndexedDB に一括バッチ保存
+  // 2. IndexedDB に一括バッチ保存（完了を確実に待機）
   await saveMemoriesBatch(updatedMemories);
 
   // 3. ログイン中であればバックグラウンドでクラウドにも同期
@@ -173,9 +177,15 @@ async function handleUpdateAlbum(oldAlbumName, newAlbumName, coverPhotoUrl) {
   const filterState = getFilterState();
   if (filterState && filterState.selectedAlbum === trimmedOld) {
     setAlbumFilter(trimmedNew);
-    const newAlbumMems = allMemoriesCache.filter(m => (m.album || '').trim() === trimmedNew);
+    const newAlbumMems = (freshMemories || allMemoriesCache).filter(m => (m.album || '').trim() === trimmedNew);
     renderAppMarkers(newAlbumMems);
     drawRouteLine(newAlbumMems);
+  }
+
+  // 6. refreshAllData 完了後、現在開いているアルバム一覧モーダルが新しいデータで再描画されるように再レンダリング処理を実行
+  const albumModalEl = document.getElementById('album-list-modal');
+  if (albumModalEl && !albumModalEl.classList.contains('hidden')) {
+    updateAlbumModalMemories(freshMemories || allMemoriesCache);
   }
 
   return freshMemories || allMemoriesCache;

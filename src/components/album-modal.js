@@ -22,6 +22,48 @@ let editingAlbum = null;
 let selectedCoverUrl = null;
 
 /**
+ * アルバムカバー写真の localStorage キーを取得
+ * @param {string} albumName 
+ * @returns {string}
+ */
+export function getAlbumCoverStorageKey(albumName) {
+  return `memory_album_cover_${encodeURIComponent((albumName || '').trim())}`;
+}
+
+/**
+ * localStorage から該当アルバムのカバー写真URLを取得
+ * @param {string} albumName 
+ * @returns {string|null}
+ */
+export function getStoredAlbumCover(albumName) {
+  if (!albumName) return null;
+  try {
+    return localStorage.getItem(getAlbumCoverStorageKey(albumName));
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * localStorage に該当アルバムのカバー写真URLを保存または削除
+ * @param {string} albumName 
+ * @param {string|null} photoUrl 
+ */
+export function setStoredAlbumCover(albumName, photoUrl) {
+  if (!albumName) return;
+  try {
+    const key = getAlbumCoverStorageKey(albumName);
+    if (photoUrl) {
+      localStorage.setItem(key, photoUrl);
+    } else {
+      localStorage.removeItem(key);
+    }
+  } catch (e) {
+    console.warn('[AlbumModal] localStorage 保存失敗:', e);
+  }
+}
+
+/**
  * モーダルDOMを初期化・生成
  */
 function ensureModalDOM() {
@@ -211,7 +253,10 @@ function ensureEditDialogDOM() {
 function openAlbumEditDialog(album) {
   ensureEditDialogDOM();
   editingAlbum = album;
-  selectedCoverUrl = album.coverPhoto || null;
+
+  // localStorage または album.coverPhoto から初期選択URLを取得
+  const storedCover = getStoredAlbumCover(album.name);
+  selectedCoverUrl = storedCover || album.coverPhoto || null;
 
   const nameInput = document.getElementById('album-edit-name-input');
   const countEl = document.getElementById('album-edit-photo-count');
@@ -233,6 +278,11 @@ function openAlbumEditDialog(album) {
     }
   });
 
+  // 初期選択写真が未決定またはリストにない場合、先頭写真があればフォールバック
+  if (!selectedCoverUrl && allPhotos.length > 0) {
+    selectedCoverUrl = allPhotos[0];
+  }
+
   if (countEl) {
     countEl.textContent = `(${allPhotos.length}枚)`;
   }
@@ -244,13 +294,14 @@ function openAlbumEditDialog(album) {
           このアルバムの写真はありません
         </div>
       `;
+      gridEl.onclick = null;
     } else {
       gridEl.innerHTML = allPhotos.map(url => {
         const isSelected = selectedCoverUrl === url;
         return `
           <div class="album-edit-thumb-item ${isSelected ? 'selected' : ''}" data-url="${url}" style="position: relative; width: 100%; aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer; border: 2.5px solid ${isSelected ? '#2563eb' : 'transparent'}; box-sizing: border-box; transition: all 0.15s ease;">
-            <img src="${url}" alt="サムネイル候補" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
-            <div class="album-edit-thumb-check" style="position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; background: #2563eb; color: white; display: ${isSelected ? 'flex' : 'none'}; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+            <img src="${url}" alt="サムネイル候補" style="width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none;" />
+            <div class="album-edit-thumb-check" style="position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; background: #2563eb; color: white; display: ${isSelected ? 'flex' : 'none'}; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3); pointer-events: none;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
@@ -259,20 +310,32 @@ function openAlbumEditDialog(album) {
         `;
       }).join('');
 
-      // サムネイルクリックで選択
-      gridEl.querySelectorAll('.album-edit-thumb-item').forEach(item => {
-        item.addEventListener('click', () => {
-          const url = item.getAttribute('data-url');
-          selectedCoverUrl = url;
+      // 写真選択イベントの安定化: closest('.album-edit-thumb-item') 経由で dataset.url を取得
+      gridEl.onclick = (e) => {
+        const item = e.target.closest('.album-edit-thumb-item');
+        if (!item) return;
 
-          gridEl.querySelectorAll('.album-edit-thumb-item').forEach(other => {
-            const isTarget = other.getAttribute('data-url') === url;
-            other.style.borderColor = isTarget ? '#2563eb' : 'transparent';
-            const check = other.querySelector('.album-edit-thumb-check');
-            if (check) check.style.display = isTarget ? 'flex' : 'none';
-          });
+        const url = item.dataset.url || item.getAttribute('data-url');
+        if (!url) return;
+
+        selectedCoverUrl = url;
+        console.log('[AlbumModal] サムネイル写真が選択されました:', url);
+
+        // クリック時に選択中を示す青枠（.selected）とチェックマークを即座に切り替え
+        gridEl.querySelectorAll('.album-edit-thumb-item').forEach(other => {
+          const otherUrl = other.dataset.url || other.getAttribute('data-url');
+          const isTarget = otherUrl === url;
+          if (isTarget) {
+            other.classList.add('selected');
+            other.style.borderColor = '#2563eb';
+          } else {
+            other.classList.remove('selected');
+            other.style.borderColor = 'transparent';
+          }
+          const check = other.querySelector('.album-edit-thumb-check');
+          if (check) check.style.display = isTarget ? 'flex' : 'none';
         });
-      });
+      };
     }
   }
 
@@ -307,7 +370,7 @@ async function handleSaveAlbumEdit() {
     return;
   }
 
-  const oldName = editingAlbum.name;
+  const oldName = (editingAlbum.name || '').trim();
   const coverUrl = selectedCoverUrl;
 
   try {
@@ -316,6 +379,20 @@ async function handleSaveAlbumEdit() {
       btnSave.textContent = '保存中...';
     }
 
+    // 1. 旧アルバム名から新アルバム名へ変更された場合は、古いキーのストレージをクリーンアップ
+    if (oldName && newName && oldName !== newName) {
+      try {
+        localStorage.removeItem(getAlbumCoverStorageKey(oldName));
+      } catch (e) {}
+    }
+
+    // 2. 選択された selectedCoverPhotoUrl を localStorage へ即座に保存
+    if (coverUrl) {
+      setStoredAlbumCover(newName, coverUrl);
+      console.log(`[AlbumModal] localStorageにアルバム「${newName}」のカバー写真を保存しました:`, coverUrl);
+    }
+
+    // 3. onUpdateAlbum(oldAlbumName, newAlbumName, selectedCoverPhotoUrl) を呼び出し、メイン処理へ引き渡す
     let updatedAllMemories = null;
     if (typeof onUpdateAlbumCallback === 'function') {
       updatedAllMemories = await onUpdateAlbumCallback(oldName, newName, coverUrl);
@@ -328,8 +405,10 @@ async function handleSaveAlbumEdit() {
       cachedMemories.forEach(m => {
         if ((m.album || '').trim() === oldName) {
           m.album = newName;
-          m.albumCoverPhoto = coverUrl;
-          m.coverPhoto = coverUrl;
+          if (coverUrl) {
+            m.albumCoverPhoto = coverUrl;
+            m.coverPhoto = coverUrl;
+          }
           if (coverUrl && Array.isArray(m.imageUrls) && m.imageUrls.includes(coverUrl)) {
             // カバー写真を先頭に移動
             m.imageUrls = [coverUrl, ...m.imageUrls.filter(u => u !== coverUrl)];
@@ -382,18 +461,18 @@ function extractAlbumList(memories = []) {
     item.count += 1;
     item.memories.push(mem);
 
-    // 明示的なカバー写真（albumCoverPhoto / coverPhoto / isCoverPhoto）の検出
+    // 2. 思い出データの albumCoverPhoto または coverPhoto / isCoverPhoto の検出
     if (!item.explicitCoverPhoto) {
       if (mem.albumCoverPhoto) {
         item.explicitCoverPhoto = mem.albumCoverPhoto;
-      } else if (mem.isCoverPhoto && Array.isArray(mem.imageUrls) && mem.imageUrls.length > 0) {
-        item.explicitCoverPhoto = mem.imageUrls[0];
       } else if (mem.coverPhoto) {
         item.explicitCoverPhoto = mem.coverPhoto;
+      } else if (mem.isCoverPhoto && Array.isArray(mem.imageUrls) && mem.imageUrls.length > 0) {
+        item.explicitCoverPhoto = mem.imageUrls[0];
       }
     }
 
-    // デフォルトフォールバック用の先頭写真
+    // 3. 該当アルバム内の先頭の思い出の写真（フォールバック用）
     if (!item.coverPhoto && Array.isArray(mem.imageUrls) && mem.imageUrls.length > 0) {
       item.coverPhoto = mem.imageUrls[0];
     }
@@ -410,8 +489,12 @@ function extractAlbumList(memories = []) {
   });
 
   return Object.values(map).map(album => {
-    // 明示的なカバー指定がある場合は最優先で採用
-    const finalCoverPhoto = album.explicitCoverPhoto || album.coverPhoto;
+    // 代表カバー写真の優先順位:
+    // 1. localStorage に保存されている該当アルバムのカバー写真URL
+    // 2. 思い出データの albumCoverPhoto または coverPhoto プロパティ
+    // 3. 該当アルバム内の先頭の思い出の写真
+    const storedCover = getStoredAlbumCover(album.name);
+    const finalCoverPhoto = storedCover || album.explicitCoverPhoto || album.coverPhoto;
 
     let dateRangeStr = '';
     if (album.minTimestamp !== Infinity && album.maxTimestamp !== -Infinity) {
@@ -658,3 +741,17 @@ export function closeAlbumListModal() {
     document.body.style.overflow = '';
   }
 }
+
+/**
+ * 最新の思い出データでアルバム一覧モーダルを再描画
+ * @param {Array<Object>} freshMemories 
+ */
+export function updateAlbumModalMemories(freshMemories) {
+  if (Array.isArray(freshMemories)) {
+    cachedMemories = freshMemories;
+  }
+  if (modalElement && !modalElement.classList.contains('hidden')) {
+    renderGrid();
+  }
+}
+
