@@ -11,6 +11,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
+import L from 'leaflet';
 import { initMap, renderMarkers, flyToLocation, getMap, drawRouteLine, clearRouteLine } from './map/map-manager';
 import { getAllMemories, saveMemory, deleteMemory, saveMemoriesBatch } from './services/storage';
 import { initMemoryModal, openCreateModal, openEditModal, openMemoryModal } from './components/memory-modal';
@@ -24,6 +25,56 @@ import { openAlbumListModal, updateAlbumModalMemories } from './components/album
 
 let allMemoriesCache = [];
 let currentFilteredMemories = [];
+let tempMarker = null;
+
+/**
+ * 登録用の一時マーカー（仮ピン）を指定座標に配置
+ * @param {number} lat 
+ * @param {number} lng 
+ * @param {Object} map 
+ */
+function placeTempMarker(lat, lng, map) {
+  if (!map || typeof lat !== 'number' || typeof lng !== 'number') return;
+  if (tempMarker) {
+    tempMarker.setLatLng([lat, lng]);
+  } else {
+    // 絵文字は使用せず、洗練されたインラインSVGプラスアイコンで一時マーカーを生成
+    const icon = L.divIcon({
+      className: 'temp-marker-icon',
+      html: `
+        <div style="background-color: #2563eb; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45); display: flex; align-items: center; justify-content: center; color: white; cursor: grab;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </div>
+      `,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+    tempMarker = L.marker([lat, lng], { icon, draggable: true }).addTo(map);
+    tempMarker.on('dragend', () => {
+      const pos = tempMarker.getLatLng();
+      const latInput = document.getElementById('memory-lat');
+      const lngInput = document.getElementById('memory-lng');
+      if (latInput) latInput.value = pos.lat;
+      if (lngInput) lngInput.value = pos.lng;
+    });
+  }
+}
+
+/**
+ * 一時マーカーを地図から削除
+ * @param {Object} map 
+ */
+function removeTempMarker(map) {
+  if (tempMarker && map) {
+    try {
+      map.removeLayer(tempMarker);
+    } catch (e) {}
+    tempMarker = null;
+  }
+}
 
 /**
  * 初回起動時、データが空であれば動作確認用のサンプルデータを投入する
@@ -526,7 +577,17 @@ async function bootstrap() {
         const center = map.getCenter();
         return { lat: center.lat, lng: center.lng };
       },
+      onPhotoLocationDetected: (lat, lng) => {
+        if (typeof lat === 'number' && typeof lng === 'number') {
+          map.flyTo([lat, lng], 16, { duration: 1.2 });
+          placeTempMarker(lat, lng, map);
+        }
+      },
+      onClose: () => {
+        removeTempMarker(map);
+      },
       onSave: async (savedMemory) => {
+        removeTempMarker(map);
         // 1. ローカル画面を即座に更新
         await refreshAllData();
         if (savedMemory && savedMemory.lat && savedMemory.lng) {
@@ -542,12 +603,14 @@ async function bootstrap() {
         }
       },
       onDelete: async (deletedId) => {
+        removeTempMarker(map);
         await handleDeleteMemory(deletedId);
       }
     });
 
     // 10. PCの右クリック（contextmenu）でピン作成モーダルを開く（通常の左クリックは地図移動・ピン選択用）
     map.on('contextmenu', (e) => {
+      placeTempMarker(e.latlng.lat, e.latlng.lng, map);
       openCreateModal({
         lat: e.latlng.lat,
         lng: e.latlng.lng

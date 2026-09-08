@@ -4,13 +4,15 @@
  * タグチップ管理、IndexedDB への保存・更新・削除を制御します。
  */
 
+import exifr from 'exifr';
 import { processPhotoFile } from '../services/photo-processor';
 import { saveMemory, updateMemory, deleteMemory } from '../services/storage';
 
 let modalCallbacks = {
   onSave: null,
   onDelete: null,
-  getFallbackLocation: null
+  getFallbackLocation: null,
+  onPhotoLocationDetected: null
 };
 
 // フォーム状態
@@ -111,11 +113,11 @@ function createModalDOM() {
           </div>
 
           <div id="exif-success-badge" class="exif-badge hidden">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            <svg id="exif-badge-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
             </svg>
-            <span id="exif-badge-text">写真から撮影日時と位置情報を自動設定しました</span>
+            <span id="exif-badge-text">写真の撮影位置を自動取得しました</span>
           </div>
 
           <div class="form-group">
@@ -284,35 +286,122 @@ function renderTagChips() {
 async function handlePhotoFiles(files) {
   if (!files || files.length === 0) return;
   let autoFoundGps = false;
+  let detectedLat = null;
+  let detectedLng = null;
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     try {
+      // 1. exifr による Exif メタデータ（GPS座標 & 撮影日時）の直接解析
+      let fileLat = null;
+      let fileLng = null;
+      let fileDatetime = null;
+
+      try {
+        const gps = await exifr.gps(file);
+        if (gps && typeof gps.latitude === 'number' && typeof gps.longitude === 'number') {
+          fileLat = gps.latitude;
+          fileLng = gps.longitude;
+        }
+      } catch (gpsErr) {
+        console.warn('[Exif] GPS取得スキップ:', gpsErr);
+      }
+
+      try {
+        const meta = await exifr.parse(file, ['DateTimeOriginal', 'CreateDate']);
+        const rawDate = meta?.DateTimeOriginal || meta?.CreateDate;
+        if (rawDate instanceof Date && !isNaN(rawDate.getTime())) {
+          fileDatetime = rawDate;
+        } else if (rawDate) {
+          const parsed = new Date(rawDate);
+          if (!isNaN(parsed.getTime())) fileDatetime = parsed;
+        }
+      } catch (metaErr) {
+        console.warn('[Exif] 撮影日時取得スキップ:', metaErr);
+      }
+
+      // 2. 画像の圧縮/変換・プレビューURL取得
       const result = await processPhotoFile(file);
       currentPhotoUrls.push(result.imageUrl);
 
-      // GPS 座標があれば自動反映
-      if (result.lat != null && result.lng != null && !autoFoundGps) {
-        currentLat = result.lat;
-        currentLng = result.lng;
-        latInput.value = result.lat;
-        lngInput.value = result.lng;
+      // GPS 座標の決定（最初の位置情報付き写真を優先）
+      const finalLat = (typeof fileLat === 'number') ? fileLat : result.lat;
+      const finalLng = (typeof fileLng === 'number') ? fileLng : result.lng;
+
+      if (finalLat != null && finalLng != null && !autoFoundGps) {
+        currentLat = finalLat;
+        currentLng = finalLng;
+        if (latInput) latInput.value = finalLat;
+        if (lngInput) lngInput.value = finalLng;
+        detectedLat = finalLat;
+        detectedLng = finalLng;
         autoFoundGps = true;
       }
 
-      // 撮影日時があれば自動反映
-      if (result.datetime && (!datetimeInput.value || autoFoundGps)) {
-        datetimeInput.value = toDatetimeLocalString(result.datetime);
+      // 撮影日時の自動反映（日付入力欄へ YYYY-MM-DD または YYYY-MM-DDTHH:mm 形式で自動セット）
+      const finalDate = fileDatetime || (result.datetime ? new Date(result.datetime) : null);
+      if (finalDate && datetimeInput && (!datetimeInput.value || autoFoundGps)) {
+        const pad = n => String(n).padStart(2, '0');
+        const yyyy = finalDate.getFullYear();
+        const mm = pad(finalDate.getMonth() + 1);
+        const dd = pad(finalDate.getDate());
+        const hh = pad(finalDate.getHours());
+        const min = pad(finalDate.getMinutes());
+        if (datetimeInput.type === 'date') {
+          datetimeInput.value = `${yyyy}-${mm}-${dd}`;
+        } else {
+          datetimeInput.value = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+        }
       }
     } catch (err) {
       console.error('写真処理エラー:', err);
     }
   }
 
-  if (autoFoundGps) {
-    exifBadge.classList.remove('hidden');
+  // 3. フォームおよびインジケーターへの自動反映
+  const iconEl = document.getElementById('exif-badge-icon');
+
+  if (autoFoundGps && detectedLat != null && detectedLng != null) {
+    // 座標が取得できた場合: 上品な薄緑系バッジとインラインSVG位置アイコンを表示
+    if (exifBadge) {
+      exifBadge.classList.remove('hidden');
+      exifBadge.style.background = 'rgba(5, 150, 105, 0.08)';
+      exifBadge.style.borderColor = 'rgba(5, 150, 105, 0.2)';
+      exifBadge.style.color = '#059669';
+    }
+    if (iconEl) {
+      iconEl.setAttribute('stroke', '#059669');
+      iconEl.innerHTML = `
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+        <circle cx="12" cy="10" r="3"></circle>
+      `;
+    }
     if (exifBadgeText) {
-      exifBadgeText.textContent = `写真から位置情報(${currentLat.toFixed(4)}, ${currentLng.toFixed(4)})と撮影日時を自動反映しました`;
+      exifBadgeText.textContent = '写真の撮影位置を自動取得しました';
+    }
+
+    // 外部コールバックを呼び出し、メイン処理へ座標を通知
+    if (typeof modalCallbacks.onPhotoLocationDetected === 'function') {
+      modalCallbacks.onPhotoLocationDetected(detectedLat, detectedLng);
+    }
+  } else if (!autoFoundGps && (currentLat == null || currentLng == null || currentLat === '')) {
+    // GPS情報が含まれていない写真の場合: エラーにせず手動指定案内へスムーズにフォールバック
+    if (exifBadge) {
+      exifBadge.classList.remove('hidden');
+      exifBadge.style.background = 'rgba(100, 116, 139, 0.08)';
+      exifBadge.style.borderColor = 'rgba(100, 116, 139, 0.2)';
+      exifBadge.style.color = '#475569';
+    }
+    if (iconEl) {
+      iconEl.setAttribute('stroke', '#64748b');
+      iconEl.innerHTML = `
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="16" x2="12" y2="12"></line>
+        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+      `;
+    }
+    if (exifBadgeText) {
+      exifBadgeText.textContent = '位置情報は含まれていません。地図上をタップして場所を指定してください';
     }
   }
 
@@ -484,6 +573,9 @@ async function handleDelete() {
 export function closeModal() {
   if (modalOverlay) {
     modalOverlay.classList.add('hidden');
+  }
+  if (typeof modalCallbacks.onClose === 'function') {
+    modalCallbacks.onClose();
   }
 }
 
