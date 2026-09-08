@@ -124,17 +124,20 @@ function renderSidebarUI() {
     .sort((a, b) => b[1] - a[1])
     .map(([tag, count]) => ({ tag, count }));
 
+  // 統計バッジの更新
+  updateStatsBadge(albumList.length, memoriesData.length);
+
   // HTML 構築
   sidebarContainer.innerHTML = `
     <!-- 検索バー -->
     <div class="sidebar-search-box">
-      <svg class="sidebar-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <svg class="sidebar-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
         <circle cx="11" cy="11" r="8"></circle>
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
       <input type="text" id="sidebar-search-input" class="sidebar-search-input" placeholder="思い出、場所、タグを検索..." value="${filterState.searchQuery}" />
       ${filterState.searchQuery ? `
-        <button id="btn-clear-search" class="btn-clear-search" title="検索クリア" style="display: flex; align-items: center; justify-content: center;">
+        <button id="btn-clear-search" class="btn-clear-search" title="検索クリア">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -143,86 +146,86 @@ function renderSidebarUI() {
       ` : ''}
     </div>
 
-    <!-- 拠点・自宅設定 -->
+    <!-- ミニマル拠点・自宅バー (1行) -->
     <div class="sidebar-group">
       <div class="sidebar-group-header">
-        <span class="sidebar-group-title" style="display: flex; align-items: center; gap: 5px;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-          </svg>
-          <span>拠点・自宅</span>
-        </span>
-        ${homeLocationState ? '<button id="btn-sidebar-clear-home" class="btn-filter-reset">解除</button>' : ''}
+        <span class="sidebar-group-title">拠点</span>
       </div>
-
-      <div style="background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(0, 0, 0, 0.06); border-radius: 14px; padding: 10px 12px;">
+      <div class="sidebar-home-bar ${isSettingHomeFromMap ? 'picking' : homeLocationState ? 'is-set' : 'empty'}">
         ${isSettingHomeFromMap ? `
-          <div style="color: #2563eb; font-size: 0.78rem; font-weight: 600; line-height: 1.4; display: flex; align-items: center; gap: 6px;">
-            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #2563eb; animation: pulse 1.5s infinite;"></span>
-            <span>地図上の自宅にしたい場所をクリックしてください</span>
-          </div>
-        ` : homeLocationState ? `
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-            <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; color: #0f172a; font-size: 0.82rem;">
-              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
-              <span>${homeLocationState.name || '自宅'}</span>
+          <div class="home-bar-lead">
+            <div class="home-bar-icon pulse">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 8 12 12 14 14"></polyline></svg>
             </div>
-            <span style="font-size: 0.72rem; color: #94a3b8;">${homeLocationState.lat.toFixed(3)}, ${homeLocationState.lng.toFixed(3)}</span>
+            <div class="home-bar-text">
+              <span class="home-bar-label">地図をクリックして指定</span>
+            </div>
           </div>
-          <div style="display: flex; gap: 6px;">
-            <button id="btn-sidebar-fly-home" style="flex: 1; padding: 6px 10px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 0.76rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 6px rgba(37,99,235,0.25); transition: all 0.2s;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
-              <span>自宅へ移動</span>
-            </button>
-            <button id="btn-sidebar-change-home" style="padding: 6px 10px; background: #f1f5f9; color: #475569; border: 1px solid rgba(0,0,0,0.06); border-radius: 8px; font-size: 0.76rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-              変更
+          <button id="btn-sidebar-cancel-pick" class="home-bar-btn" type="button">キャンセル</button>
+        ` : homeLocationState ? `
+          <div class="home-bar-lead" id="btn-sidebar-fly-home" title="自宅へジャンプ">
+            <div class="home-bar-icon">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              </svg>
+            </div>
+            <div class="home-bar-text">
+              <span class="home-bar-label">${homeLocationState.name || '自宅'}</span>
+              <span class="home-bar-sub">${homeLocationState.lat.toFixed(2)}, ${homeLocationState.lng.toFixed(2)}</span>
+            </div>
+          </div>
+          <div class="home-bar-actions">
+            <button id="btn-sidebar-change-home" class="home-bar-btn" type="button" title="自宅の位置を変更">変更</button>
+            <button id="btn-sidebar-clear-home" class="home-bar-btn-clear" type="button" title="自宅設定を解除">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
           </div>
         ` : `
-          <div style="color: #64748b; font-size: 0.76rem; margin-bottom: 8px; line-height: 1.4;">
-            自宅を設定すると、旅のルート探索時に出発地・帰着点として自動反映されます。
+          <div class="home-bar-lead">
+            <div class="home-bar-icon">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              </svg>
+            </div>
+            <div class="home-bar-text">
+              <span class="home-bar-label">拠点未設定</span>
+            </div>
           </div>
-          <div style="display: flex; gap: 6px;">
-            <button id="btn-sidebar-set-home-map" style="flex: 1; padding: 6px 10px; background: #f8fafc; color: #2563eb; border: 1px solid rgba(37,99,235,0.2); border-radius: 8px; font-size: 0.76rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 8 12 12 14 14"></polyline></svg>
-              <span>地図から指定</span>
-            </button>
-            <button id="btn-sidebar-set-home-current" style="flex: 1; padding: 6px 10px; background: #f1f5f9; color: #0f172a; border: 1px solid rgba(0,0,0,0.06); border-radius: 8px; font-size: 0.76rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
-              <span>現在地を設定</span>
-            </button>
+          <div class="home-bar-actions">
+            <button id="btn-sidebar-set-home-map" class="home-bar-btn primary" type="button" title="地図をクリックして指定">地図指定</button>
+            <button id="btn-sidebar-set-home-current" class="home-bar-btn" type="button" title="現在地を自宅に設定">現在地</button>
           </div>
         `}
       </div>
     </div>
 
-    <!-- 年別フィルター -->
+    <!-- 時期フィルター（セグメントコントロール） -->
     <div class="sidebar-group">
       <div class="sidebar-group-header">
-        <span class="sidebar-group-title">時期で絞り込み</span>
+        <span class="sidebar-group-title">時期</span>
         ${filterState.selectedYear ? '<button id="btn-reset-year" class="btn-filter-reset">クリア</button>' : ''}
       </div>
-      <div class="filter-chip-group">
-        <button class="filter-chip ${filterState.selectedYear === '' ? 'active' : ''}" data-year="">すべて</button>
+      <div class="segmented-control year-segmented-control">
+        <button class="segmented-item ${filterState.selectedYear === '' ? 'active' : ''}" data-year="">すべて</button>
         ${sortedYears.map(yr => `
-          <button class="filter-chip ${filterState.selectedYear === yr ? 'active' : ''}" data-year="${yr}">
-            ${yr}年
+          <button class="segmented-item ${filterState.selectedYear === yr ? 'active' : ''}" data-year="${yr}">
+            ${yr}
           </button>
         `).join('')}
       </div>
     </div>
 
-    <!-- タグクラウド -->
+    <!-- タグクラウド（ミニマルチップ・カッコなし） -->
     <div class="sidebar-group">
       <div class="sidebar-group-header">
-        <span class="sidebar-group-title">タグ (${sortedTags.length})</span>
+        <span class="sidebar-group-title">タグ</span>
         ${filterState.selectedTag ? '<button id="btn-reset-tag" class="btn-filter-reset">すべて表示</button>' : ''}
       </div>
       <div class="sidebar-tag-cloud">
         <button class="sidebar-tag-chip ${filterState.selectedTag === '' ? 'active' : ''}" data-tag="">すべて</button>
         ${sortedTags.map(item => `
           <button class="sidebar-tag-chip ${filterState.selectedTag === item.tag ? 'active' : ''}" data-tag="${item.tag}">
-            #${item.tag} <span class="tag-count">(${item.count})</span>
+            #${item.tag} <span class="tag-count">${item.count}</span>
           </button>
         `).join('')}
       </div>
@@ -260,8 +263,8 @@ function bindSidebarEvents(albumsMap) {
     });
   }
 
-  // 年別チップクリック
-  sidebarContainer.querySelectorAll('.filter-chip').forEach(btn => {
+  // セグメントコントロール（年別）クリック
+  sidebarContainer.querySelectorAll('.segmented-item').forEach(btn => {
     btn.addEventListener('click', () => {
       filterState.selectedYear = btn.getAttribute('data-year') || '';
       renderSidebarUI();
@@ -302,7 +305,10 @@ function bindSidebarEvents(albumsMap) {
   // 自宅操作イベントのバインド
   const btnClearHome = document.getElementById('btn-sidebar-clear-home');
   if (btnClearHome) {
-    btnClearHome.addEventListener('click', handleClearHome);
+    btnClearHome.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleClearHome();
+    });
   }
 
   const btnFlyHome = document.getElementById('btn-sidebar-fly-home');
@@ -312,7 +318,10 @@ function bindSidebarEvents(albumsMap) {
 
   const btnChangeHome = document.getElementById('btn-sidebar-change-home');
   if (btnChangeHome) {
-    btnChangeHome.addEventListener('click', startMapPickHome);
+    btnChangeHome.addEventListener('click', (e) => {
+      e.stopPropagation();
+      startMapPickHome();
+    });
   }
 
   const btnSetHomeMap = document.getElementById('btn-sidebar-set-home-map');
@@ -323,6 +332,16 @@ function bindSidebarEvents(albumsMap) {
   const btnSetHomeCurrent = document.getElementById('btn-sidebar-set-home-current');
   if (btnSetHomeCurrent) {
     btnSetHomeCurrent.addEventListener('click', setCurrentLocationAsHome);
+  }
+
+  const btnCancelPick = document.getElementById('btn-sidebar-cancel-pick');
+  if (btnCancelPick) {
+    btnCancelPick.addEventListener('click', () => {
+      isSettingHomeFromMap = false;
+      const mapEl = document.getElementById('map');
+      if (mapEl) mapEl.style.cursor = '';
+      renderSidebarUI();
+    });
   }
 }
 
@@ -462,36 +481,68 @@ export async function initSidebar(options = {}) {
 }
 
 /**
- * スマホ用サイドバー閉じるボタン（SVGクロス）をヘッダー右上に配置
+ * 旅の全体統計サマリーバッジをヘッダーに更新
+ * @param {number} albumCount 
+ * @param {number} totalSpots 
+ */
+function updateStatsBadge(albumCount, totalSpots) {
+  const badge = document.getElementById('sidebar-header-stats');
+  if (!badge) return;
+
+  badge.innerHTML = `
+    <span class="stats-badge-item">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+      <strong>${albumCount}</strong> アルバム
+    </span>
+    <span class="stats-badge-divider">·</span>
+    <span class="stats-badge-item">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"></path></svg>
+      <strong>${totalSpots}</strong> スポット
+    </span>
+  `;
+}
+
+/**
+ * スマホ用サイドバー閉じるボタン（SVGクロス）と旅統計サマリーバッジをヘッダーに配置
  */
 function setupSidebarHeader() {
   const header = document.querySelector('.sidebar-header');
-  if (!header || document.getElementById('btn-sidebar-close')) return;
+  if (!header) return;
 
-  const closeBtnHtml = `
-    <button id="btn-sidebar-close" class="sidebar-btn-close" type="button" aria-label="サイドバーを閉じる" title="閉じる">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="18" y1="6" x2="6" y2="18"></line>
-        <line x1="6" y1="6" x2="18" y2="18"></line>
-      </svg>
-    </button>
-  `;
+  if (!document.getElementById('btn-sidebar-close')) {
+    const closeBtnHtml = `
+      <button id="btn-sidebar-close" class="sidebar-btn-close" type="button" aria-label="サイドバーを閉じる" title="閉じる">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    `;
 
-  const h2 = header.querySelector('h2');
-  if (h2) {
-    const topRow = document.createElement('div');
-    topRow.className = 'sidebar-header-top-row';
-    h2.parentNode.insertBefore(topRow, h2);
-    topRow.appendChild(h2);
-    topRow.insertAdjacentHTML('beforeend', closeBtnHtml);
-  } else {
-    header.insertAdjacentHTML('afterbegin', closeBtnHtml);
+    const h2 = header.querySelector('h2');
+    if (h2) {
+      const topRow = document.createElement('div');
+      topRow.className = 'sidebar-header-top-row';
+      h2.parentNode.insertBefore(topRow, h2);
+      topRow.appendChild(h2);
+      topRow.insertAdjacentHTML('beforeend', closeBtnHtml);
+    } else {
+      header.insertAdjacentHTML('afterbegin', closeBtnHtml);
+    }
+
+    document.getElementById('btn-sidebar-close')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeSidebar();
+    });
   }
 
-  document.getElementById('btn-sidebar-close')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    closeSidebar();
-  });
+  // 統計バッジコンテナの配置（ロゴの直下）
+  if (!document.getElementById('sidebar-header-stats')) {
+    const statsContainer = document.createElement('div');
+    statsContainer.id = 'sidebar-header-stats';
+    statsContainer.className = 'sidebar-stats-badge';
+    header.appendChild(statsContainer);
+  }
 }
 
 /**

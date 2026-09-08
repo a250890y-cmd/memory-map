@@ -23,52 +23,273 @@
 }
 
 /* --------------------------------------------------------------------------
-   サイドバー スタイル
+   サイドバー スタイル（フローティング・フロストガラス調）
    -------------------------------------------------------------------------- */
+
+/* 全画面レイアウト基盤 */
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: block;
+}
+
+.map-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+/* フローティング・フロストガラス サイドバー */
+.sidebar, #sidebar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  bottom: 16px;
+  width: 350px;
+  height: calc(100vh - 32px);
+  border-radius: 20px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+
+/* サイドバーヘッダー */
+.sidebar-header {
+  padding: 1.15rem 1.25rem 0.85rem 1.25rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar-header-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-header h2 {
+  font-size: 1.18rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: #0f172a;
+  margin: 0;
+}
+
+/* 旅統計サマリーバッジ */
+.sidebar-stats-badge {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  padding: 3px 9px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 20px;
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.stats-badge-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stats-badge-item strong {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.stats-badge-divider {
+  color: #cbd5e1;
+  font-weight: 700;
+}
+
+/* アクションボタン群（上品なカード/ボタンスタイル） */
+.sidebar-quick-actions {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.btn-action-card-primary {
+  width: 100%;
+  padding: 9px 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9));
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 13px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0f172a;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-action-card-primary:hover {
+  background: #ffffff;
+  border-color: rgba(37, 99, 235, 0.3);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.08);
+}
+
+.btn-action-card-primary:active {
+  transform: translateY(0);
+}
+
+.action-card-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.action-card-icon {
+  color: #2563eb;
+}
+
+.action-card-arrow {
+  color: #94a3b8;
+  transition: transform 0.2s ease;
+}
+
+.btn-action-card-primary:hover .action-card-arrow {
+  transform: translateX(2px);
+  color: #2563eb;
+}
+
+.quick-actions-row {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-action-card-sub {
+  flex: 1;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 11px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-action-card-sub:hover {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #0f172a;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.btn-action-card-sub.tour {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(37, 99, 235, 0.03));
+  border-color: rgba(37, 99, 235, 0.2);
+  color: #1d4ed8;
+}
+
+.btn-action-card-sub.tour:hover {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(37, 99, 235, 0.06));
+  border-color: rgba(37, 99, 235, 0.35);
+  color: #1e40af;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.12);
+}
+
+/* スクロール領域 */
+.sidebar-content {
+  flex: 1;
+  padding: 1.1rem 1.25rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+.sidebar-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.22);
+}
 
 /* 検索ボックス */
 .sidebar-search-box {
   position: relative;
   display: flex;
   align-items: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.1rem;
 }
 
 .sidebar-search-icon {
   position: absolute;
-  left: 12px;
+  left: 11px;
   color: #94a3b8;
   pointer-events: none;
 }
 
 .sidebar-search-input {
   width: 100%;
-  padding: 10px 36px 10px 36px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border);
-  background: #ffffff;
-  font-size: 0.88rem;
-  color: var(--color-text-main);
+  padding: 8px 32px 8px 32px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 0.82rem;
+  color: #0f172a;
   outline: none;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .sidebar-search-input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  background: #ffffff;
+  border-color: rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .btn-clear-search {
   position: absolute;
-  right: 10px;
+  right: 9px;
   background: rgba(0, 0, 0, 0.06);
   border: none;
   border-radius: 50%;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   font-size: 0.7rem;
-  color: var(--color-text-muted);
+  color: #64748b;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -78,147 +299,209 @@
 
 .btn-clear-search:hover {
   background: rgba(0, 0, 0, 0.12);
-  color: var(--color-text-main);
+  color: #0f172a;
 }
 
 /* サイドバー グループ */
 .sidebar-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
 .sidebar-group-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.55rem;
 }
 
 .sidebar-group-title {
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   font-weight: 700;
-  color: var(--color-text-muted);
-  letter-spacing: 0.5px;
+  color: #94a3b8;
+  letter-spacing: 0.6px;
   text-transform: uppercase;
 }
 
 .btn-filter-reset {
   background: none;
   border: none;
-  color: var(--color-primary);
-  font-size: 0.75rem;
+  color: #2563eb;
+  font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 1px 4px;
 }
 
 .btn-filter-reset:hover {
   text-decoration: underline;
 }
 
-/* 年別チップ */
-.filter-chip-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.filter-chip {
-  padding: 5px 12px;
-  border-radius: 20px;
-  border: 1px solid var(--color-border);
-  background: #ffffff;
-  color: #475569;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.filter-chip:hover {
-  border-color: #cbd5e1;
-  background: #f8fafc;
-}
-
-.filter-chip.active {
-  background: var(--color-primary);
-  color: #ffffff;
-  border-color: var(--color-primary);
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
-}
-
-/* アルバムリスト */
-.sidebar-album-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.sidebar-album-item {
+/* ミニマルな拠点・自宅バー (1行) */
+.sidebar-home-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  justify-content: space-between;
+  padding: 7px 11px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: 12px;
-  background: #ffffff;
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-.sidebar-album-item:hover {
-  background: #f8fafc;
-  border-color: var(--color-border);
-  transform: translateX(2px);
+.sidebar-home-bar:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.1);
 }
 
-.sidebar-album-item.active {
-  background: rgba(37, 99, 235, 0.08);
-  border-color: rgba(37, 99, 235, 0.3);
+.home-bar-lead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  cursor: pointer;
 }
 
-.album-thumb-img {
-  width: 36px;
-  height: 36px;
+.home-bar-icon {
+  width: 26px;
+  height: 26px;
   border-radius: 8px;
-  object-fit: cover;
-  flex-shrink: 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.album-thumb-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: #f1f5f9;
+  background: rgba(0, 0, 0, 0.04);
+  color: #64748b;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
   flex-shrink: 0;
+  transition: all 0.2s ease;
 }
 
-.album-item-info {
-  flex: 1;
+.sidebar-home-bar.is-set .home-bar-icon {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.sidebar-home-bar.picking .home-bar-icon {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.home-bar-text {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 
-.album-item-title {
-  font-size: 0.88rem;
+.home-bar-label {
+  font-size: 0.78rem;
   font-weight: 600;
-  color: var(--color-text-main);
+  color: #0f172a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.25;
 }
 
-.album-item-count {
-  font-size: 0.74rem;
-  color: var(--color-text-muted);
-  margin-top: 2px;
+.home-bar-sub {
+  font-size: 0.67rem;
+  color: #94a3b8;
+  line-height: 1.2;
 }
 
-/* タグクラウド */
+.home-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.home-bar-btn {
+  padding: 3px 8px;
+  background: rgba(0, 0, 0, 0.04);
+  border: none;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.home-bar-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #0f172a;
+}
+
+.home-bar-btn.primary {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+
+.home-bar-btn.primary:hover {
+  background: rgba(37, 99, 235, 0.18);
+  color: #1d4ed8;
+}
+
+.home-bar-btn-clear {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.home-bar-btn-clear:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+/* セグメントコントロール（時期フィルター） */
+.segmented-control {
+  display: flex;
+  background: rgba(0, 0, 0, 0.04);
+  padding: 3px;
+  border-radius: 12px;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.segmented-control::-webkit-scrollbar {
+  display: none;
+}
+
+.segmented-item {
+  flex: 1;
+  min-width: fit-content;
+  padding: 5px 9px;
+  border: none;
+  background: transparent;
+  border-radius: 9px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.segmented-item:hover {
+  color: #0f172a;
+}
+
+.segmented-item.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* タグクラウド（ミニマルチップ・カッコなし） */
 .sidebar-tag-cloud {
   display: flex;
   flex-wrap: wrap;
@@ -226,42 +509,53 @@
 }
 
 .sidebar-tag-chip {
-  padding: 4px 10px;
+  padding: 4px 9px;
   border-radius: 8px;
-  border: 1px solid var(--color-border);
-  background: #ffffff;
-  color: #334155;
-  font-size: 0.78rem;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.65);
+  color: #475569;
+  font-size: 0.74rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
 }
 
 .sidebar-tag-chip:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+.sidebar-tag-chip .tag-count {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  font-weight: 600;
 }
 
 .sidebar-tag-chip.active {
   background: #0f172a;
   color: #ffffff;
   border-color: #0f172a;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
 }
 
-.sidebar-tag-chip .tag-count {
-  font-size: 0.72rem;
-  opacity: 0.7;
+.sidebar-tag-chip.active .tag-count {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* --------------------------------------------------------------------------
-   認証 & クラウド同期 UI スタイル (サイドバー下部)
+   認証 & クラウド同期 UI スタイル (サイドバー下部フッター)
    -------------------------------------------------------------------------- */
 .sidebar-auth-footer {
-  padding: 1rem 1.2rem;
-  border-top: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(8px);
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .btn-google-login {
@@ -269,29 +563,29 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 8px;
+  padding: 8px 12px;
   background: #ffffff;
-  color: #1f2937;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #1e293b;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-  transition: all 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-google-login:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: #f8fafc;
+  border-color: rgba(0, 0, 0, 0.15);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .auth-login-note {
-  font-size: 0.72rem;
-  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  color: #94a3b8;
   text-align: center;
   margin-top: 6px;
   line-height: 1.3;
@@ -299,68 +593,70 @@
 
 .auth-user-card {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
 
 .auth-user-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .auth-user-avatar {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
 }
 
 .auth-user-avatar-fallback {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: #2563eb;
+  background: #0f172a;
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   flex-shrink: 0;
 }
 
 .auth-user-info {
-  flex: 1;
   min-width: 0;
 }
 
 .auth-user-name {
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  color: var(--color-text-main);
+  color: #0f172a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 .auth-sync-status {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.72rem;
-  color: var(--color-success);
+  gap: 5px;
+  font-size: 0.67rem;
+  color: #059669;
   margin-top: 2px;
 }
 
 .auth-sync-indicator {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--color-success);
+  background: #059669;
 }
 
 .auth-sync-indicator.syncing {
@@ -375,35 +671,39 @@
 
 .auth-user-actions {
   display: flex;
-  gap: 6px;
-  margin-top: 4px;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .btn-auth-action {
-  flex: 1;
-  padding: 5px 8px;
-  font-size: 0.74rem;
+  padding: 4px 7px;
+  font-size: 0.7rem;
   font-weight: 600;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-  background: #ffffff;
-  color: var(--color-text-main);
+  border-radius: 7px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.8);
+  color: #475569;
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .btn-auth-action:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #0f172a;
 }
 
 .btn-auth-action.logout {
-  color: var(--color-danger);
+  color: #94a3b8;
+  border-color: transparent;
+  background: transparent;
 }
 
 .btn-auth-action.logout:hover {
   background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
 }
 
 /* --------------------------------------------------------------------------
@@ -1496,22 +1796,29 @@
   /* ------------------------------
      1. ドロワーサイドバー & 暗転オーバーレイ
      ------------------------------ */
-  .sidebar {
+  .sidebar, #sidebar {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     bottom: 0 !important;
-    width: min(84vw, 320px) !important;
+    width: min(86vw, 340px) !important;
     height: 100% !important;
     height: 100dvh !important;
+    border-radius: 0 20px 20px 0 !important;
+    border-top: none !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.5) !important;
+    background: rgba(255, 255, 255, 0.88) !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.18) !important;
     transform: translateX(-100%) !important;
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
     z-index: 3000 !important;
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25) !important;
-    background: rgba(255, 255, 255, 0.98) !important;
   }
 
-  .sidebar.open {
+  .sidebar.open, #sidebar.open {
     transform: translateX(0) !important;
   }
 

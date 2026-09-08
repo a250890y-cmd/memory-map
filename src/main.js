@@ -183,26 +183,26 @@ function setupHeaderActions(map) {
   if (!header || document.getElementById('sidebar-quick-actions')) return;
 
   const actionsHtml = `
-    <div id="sidebar-quick-actions" style="margin-top: 10px;">
-      <button id="btn-quick-albums" style="width: 100%; padding: 8px 12px; margin-bottom: 8px; background: #ffffff; color: #0f172a; border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.03); transition: all 0.2s;">
-        <div style="display: flex; align-items: center; gap: 7px;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <div id="sidebar-quick-actions" class="sidebar-quick-actions">
+      <button id="btn-quick-albums" class="btn-action-card-primary" type="button">
+        <div class="action-card-left">
+          <svg class="action-card-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
           </svg>
-          <span>アルバム一覧を見る</span>
+          <span>アルバム一覧</span>
         </div>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="action-card-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="9 18 15 12 9 6"></polyline>
         </svg>
       </button>
 
-      <div style="display: flex; gap: 8px;">
-        <button id="btn-quick-tour" style="flex: 1; padding: 7px 10px; background: #2563eb; color: white; border: none; border-radius: 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 8px rgba(37,99,235,0.25); transition: all 0.2s;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <div class="quick-actions-row">
+        <button id="btn-quick-tour" class="btn-action-card-sub tour" type="button">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
           <span>ツアー再生</span>
         </button>
-        <button id="btn-quick-photobook" style="flex: 1; padding: 7px 10px; background: #f1f5f9; color: #0f172a; border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        <button id="btn-quick-photobook" class="btn-action-card-sub" type="button">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
           <span>旅のフォトブック</span>
         </button>
       </div>
