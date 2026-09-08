@@ -212,43 +212,6 @@ function renderSidebarUI() {
       </div>
     </div>
 
-    <!-- アルバム一覧 -->
-    <div class="sidebar-group">
-      <div class="sidebar-group-header">
-        <span class="sidebar-group-title">アルバム (${albumList.length})</span>
-        ${filterState.selectedAlbum ? '<button id="btn-reset-album" class="btn-filter-reset">すべて表示</button>' : ''}
-      </div>
-      <div class="sidebar-album-list">
-        <div class="sidebar-album-item ${filterState.selectedAlbum === '' ? 'active' : ''}" data-album="">
-          <div class="album-thumb-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-            </svg>
-          </div>
-          <div class="album-item-info">
-            <div class="album-item-title">すべてのアルバム</div>
-            <div class="album-item-count">${memoriesData.length} 件の思い出</div>
-          </div>
-        </div>
-        ${albumList.map(a => `
-          <div class="sidebar-album-item ${filterState.selectedAlbum === a.name ? 'active' : ''}" data-album="${a.name}">
-            ${a.coverUrl
-              ? `<img src="${a.coverUrl}" alt="${a.name}" class="album-thumb-img" />`
-              : `<div class="album-thumb-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                  </svg>
-                </div>`
-            }
-            <div class="album-item-info">
-              <div class="album-item-title">${a.name}</div>
-              <div class="album-item-count">${a.count} 件</div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-
     <!-- タグクラウド -->
     <div class="sidebar-group">
       <div class="sidebar-group-header">
@@ -310,33 +273,6 @@ function bindSidebarEvents(albumsMap) {
   if (btnResetYear) {
     btnResetYear.addEventListener('click', () => {
       filterState.selectedYear = '';
-      renderSidebarUI();
-      applyFilters();
-    });
-  }
-
-  // アルバム選択クリック
-  sidebarContainer.querySelectorAll('.sidebar-album-item').forEach(el => {
-    el.addEventListener('click', () => {
-      const album = el.getAttribute('data-album') || '';
-      filterState.selectedAlbum = album;
-      renderSidebarUI();
-      applyFilters();
-
-      // アルバムが選択された場合、カメラ移動をコールバック
-      if (album && albumsMap[album] && typeof callbacks.onAlbumSelect === 'function') {
-        callbacks.onAlbumSelect(album, albumsMap[album].memories);
-      }
-
-      // スマホ表示時は地図を見やすくするためサイドバーを自動クローズ
-      closeSidebarIfMobile();
-    });
-  });
-
-  const btnResetAlbum = document.getElementById('btn-reset-album');
-  if (btnResetAlbum) {
-    btnResetAlbum.addEventListener('click', () => {
-      filterState.selectedAlbum = '';
       renderSidebarUI();
       applyFilters();
     });
@@ -613,4 +549,14 @@ export function closeSidebarIfMobile() {
   if (typeof window !== 'undefined' && window.innerWidth <= 768) {
     closeSidebar();
   }
+}
+
+/**
+ * 外部からアルバムフィルターを更新
+ * @param {string} albumName
+ */
+export function setAlbumFilter(albumName = '') {
+  filterState.selectedAlbum = albumName;
+  renderSidebarUI();
+  applyFilters();
 }

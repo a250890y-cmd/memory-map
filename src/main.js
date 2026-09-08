@@ -12,9 +12,9 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
 import { initMap, renderMarkers, flyToLocation, getMap, drawRouteLine, clearRouteLine } from './map/map-manager';
-import { getAllMemories, saveMemory, deleteMemory } from './services/storage';
+import { getAllMemories, saveMemory, deleteMemory, saveMemoriesBatch } from './services/storage';
 import { initMemoryModal, openCreateModal, openEditModal, openMemoryModal } from './components/memory-modal';
-import { initSidebar, updateSidebar, getFilterState, toggleSidebar, closeSidebar, closeSidebarIfMobile } from './components/sidebar';
+import { initSidebar, updateSidebar, getFilterState, toggleSidebar, closeSidebar, closeSidebarIfMobile, setAlbumFilter } from './components/sidebar';
 import { startAlbumTour } from './components/tour-player';
 import { openPhotobookModal } from './components/photobook-modal';
 import { initAuthUI } from './components/auth-button';
@@ -115,6 +115,67 @@ async function refreshAllData() {
 }
 
 /**
+ * アルバム情報（アルバム名・代表写真）を一括更新
+ * @param {string} oldAlbumName 
+ * @param {string} newAlbumName 
+ * @param {string|null} coverPhotoUrl 
+ */
+async function handleUpdateAlbum(oldAlbumName, newAlbumName, coverPhotoUrl) {
+  if (!oldAlbumName || !newAlbumName) return;
+
+  const trimmedOld = oldAlbumName.trim();
+  const trimmedNew = newAlbumName.trim();
+
+  // 1. 対象の思い出を抽出して更新
+  const targetMemories = allMemoriesCache.filter(m => (m.album || '').trim() === trimmedOld);
+  if (targetMemories.length === 0) return;
+
+  const updatedMemories = [];
+
+  targetMemories.forEach(mem => {
+    const updated = {
+      ...mem,
+      album: trimmedNew
+    };
+
+    // カバー写真の指定があり、その思い出の写真リストに含まれる場合は先頭に並び替え
+    if (coverPhotoUrl && Array.isArray(updated.imageUrls) && updated.imageUrls.includes(coverPhotoUrl)) {
+      updated.imageUrls = [coverPhotoUrl, ...updated.imageUrls.filter(u => u !== coverPhotoUrl)];
+      updated.coverPhoto = coverPhotoUrl;
+    }
+
+    updatedMemories.push(updated);
+  });
+
+  // 2. IndexedDB に一括バッチ保存
+  await saveMemoriesBatch(updatedMemories);
+
+  // 3. ログイン中であればバックグラウンドでクラウドにも同期
+  const user = getCurrentUser();
+  if (user) {
+    Promise.allSettled(
+      updatedMemories.map(m => syncSingleMemoryToCloud(user, m))
+    ).then(() => {
+      console.log(`[Main] アルバム「${trimmedNew}」のクラウド同期が完了しました。`);
+    }).catch(err => {
+      console.warn('[Main] アルバムクラウド同期保留:', err);
+    });
+  }
+
+  // 4. 全画面データの再描画
+  await refreshAllData();
+
+  // 5. もし現在該当アルバムでフィルタ中なら新しいアルバム名でフィルタ再設定
+  const filterState = getFilterState();
+  if (filterState && filterState.selectedAlbum === trimmedOld) {
+    setAlbumFilter(trimmedNew);
+    const newAlbumMems = allMemoriesCache.filter(m => (m.album || '').trim() === trimmedNew);
+    renderAppMarkers(newAlbumMems);
+    drawRouteLine(newAlbumMems);
+  }
+}
+
+/**
  * サイドバーヘッダーにツアー再生＆フォトブック出力ボタンを設置
  */
 function setupHeaderActions(map) {
@@ -153,33 +214,45 @@ function setupHeaderActions(map) {
   // アルバム一覧モーダル表示イベント
   document.getElementById('btn-quick-albums')?.addEventListener('click', () => {
     closeSidebarIfMobile();
-    openAlbumListModal(allMemoriesCache, (albumName, albumMemories) => {
-      currentFilteredMemories = albumMemories;
-      renderAppMarkers(albumMemories);
+    openAlbumListModal(allMemoriesCache, {
+      onSelectAlbum: (albumName, albumMemories) => {
+        currentFilteredMemories = albumMemories;
+        renderAppMarkers(albumMemories);
 
-      if (albumName && albumMemories && albumMemories.length > 0) {
-        drawRouteLine(albumMemories);
-        const latlngs = albumMemories
-          .filter(m => typeof m.lat === 'number' && typeof m.lng === 'number')
-          .map(m => [m.lat, m.lng]);
+        if (albumName && albumMemories && albumMemories.length > 0) {
+          drawRouteLine(albumMemories);
+          const latlngs = albumMemories
+            .filter(m => typeof m.lat === 'number' && typeof m.lng === 'number')
+            .map(m => [m.lat, m.lng]);
 
-        if (latlngs.length === 1) {
-          flyToLocation(latlngs[0][0], latlngs[0][1], 13);
-        } else if (latlngs.length > 1) {
-          map.fitBounds(latlngs, {
-            padding: [60, 60],
-            maxZoom: 15,
-            animate: true
-          });
+          if (latlngs.length === 1) {
+            flyToLocation(latlngs[0][0], latlngs[0][1], 13);
+          } else if (latlngs.length > 1) {
+            map.fitBounds(latlngs, {
+              padding: [60, 60],
+              maxZoom: 15,
+              animate: true
+            });
+          }
+        } else {
+          clearRouteLine();
         }
-      } else {
-        clearRouteLine();
-      }
 
-      // サイドバーの該当アルバムアイテムを選択状態に同期
-      const sidebarAlbumItem = document.querySelector(`.sidebar-album-item[data-album="${CSS.escape(albumName)}"]`);
-      if (sidebarAlbumItem) {
-        sidebarAlbumItem.click();
+        // サイドバーのフィルター状態を同期
+        setAlbumFilter(albumName);
+      },
+      onPlayTour: (albumMemories) => {
+        if (albumMemories && albumMemories.length > 0) {
+          startAlbumTour(albumMemories, map);
+        }
+      },
+      onOpenPhotobook: (albumName, albumMemories) => {
+        if (albumMemories && albumMemories.length > 0) {
+          openPhotobookModal(albumName, albumMemories);
+        }
+      },
+      onUpdateAlbum: async (oldAlbumName, newAlbumName, coverPhotoUrl) => {
+        await handleUpdateAlbum(oldAlbumName, newAlbumName, coverPhotoUrl);
       }
     });
   });

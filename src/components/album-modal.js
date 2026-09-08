@@ -1,128 +1,347 @@
 /**
  * Memory Map - アルバム一覧モーダルコンポーネント
  * カバー写真、期間、スポット数を表示するリッチなカードグリッド一覧を提供し、
- * アルバム選択時に地図フォーカスおよび道路ルート描画と連携します。
+ * ツアー再生、フォトブック出力、アルバム名・代表サムネイル写真の編集に対応します。
  */
 
 let modalElement = null;
+let editDialogElement = null;
 let cachedMemories = [];
+
+// コールバック保持
 let onSelectAlbumCallback = null;
+let onPlayTourCallback = null;
+let onOpenPhotobookCallback = null;
+let onUpdateAlbumCallback = null;
+
 let currentSearchQuery = '';
 let currentSortBy = 'newest';
+
+// 編集中の状態
+let editingAlbum = null;
+let selectedCoverUrl = null;
 
 /**
  * モーダルDOMを初期化・生成
  */
 function ensureModalDOM() {
-  if (document.getElementById('album-list-modal')) return;
-
-  const html = `
-    <div id="album-list-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="アルバム一覧">
-      <div class="modal-card album-modal-card">
-        <!-- ヘッダー -->
-        <header class="modal-header">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div class="album-modal-icon-badge">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-              </svg>
-            </div>
-            <div>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <h2 class="modal-title" style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #0f172a;">アルバム一覧</h2>
-                <span id="album-modal-total-badge" class="album-modal-total-badge">0</span>
+  if (!document.getElementById('album-list-modal')) {
+    const html = `
+      <div id="album-list-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="アルバム一覧">
+        <div class="modal-card album-modal-card">
+          <!-- ヘッダー -->
+          <header class="modal-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="album-modal-icon-badge">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
               </div>
-              <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: #64748b;">これまでの旅のアルバムから場所やルートを振り返る</p>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <h2 class="modal-title" style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #0f172a;">アルバム一覧</h2>
+                  <span id="album-modal-total-badge" class="album-modal-total-badge">0</span>
+                </div>
+                <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: #64748b;">これまでの旅のアルバムから場所やルートを振り返る</p>
+              </div>
+            </div>
+            <button id="btn-close-album-modal" class="btn-icon-close" type="button" aria-label="閉じる" title="閉じる (Esc)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </header>
+
+          <!-- 検索 & 並び替えツールバー -->
+          <div class="album-modal-toolbar">
+            <div class="album-modal-search-box">
+              <svg class="album-modal-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="album-modal-search-input" class="album-modal-search-input" placeholder="アルバム名を検索..." />
+              <button id="btn-clear-album-search" class="album-modal-clear-search hidden" type="button" aria-label="検索クリア">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            <div class="album-modal-sort-box">
+              <select id="album-modal-sort-select" class="album-modal-sort-select" aria-label="並び替え順">
+                <option value="newest">時期が新しい順</option>
+                <option value="oldest">時期が古い順</option>
+                <option value="count">スポットが多い順</option>
+                <option value="name">名前順</option>
+              </select>
             </div>
           </div>
-          <button id="btn-close-album-modal" class="btn-icon-close" type="button" aria-label="閉じる" title="閉じる (Esc)">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+
+          <!-- アルバムグリッド本体 -->
+          <div class="modal-body album-modal-body">
+            <div id="album-modal-grid" class="album-modal-grid"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    modalElement = document.getElementById('album-list-modal');
+
+    // イベントバインド
+    const btnClose = document.getElementById('btn-close-album-modal');
+    const searchInput = document.getElementById('album-modal-search-input');
+    const btnClearSearch = document.getElementById('btn-clear-album-search');
+    const sortSelect = document.getElementById('album-modal-sort-select');
+
+    btnClose?.addEventListener('click', closeAlbumListModal);
+
+    modalElement?.addEventListener('click', (e) => {
+      if (e.target === modalElement) {
+        closeAlbumListModal();
+      }
+    });
+
+    searchInput?.addEventListener('input', (e) => {
+      currentSearchQuery = e.target.value.trim();
+      if (btnClearSearch) {
+        btnClearSearch.classList.toggle('hidden', !currentSearchQuery);
+      }
+      renderGrid();
+    });
+
+    btnClearSearch?.addEventListener('click', () => {
+      currentSearchQuery = '';
+      if (searchInput) searchInput.value = '';
+      btnClearSearch.classList.add('hidden');
+      renderGrid();
+    });
+
+    sortSelect?.addEventListener('change', (e) => {
+      currentSortBy = e.target.value;
+      renderGrid();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (editDialogElement && !editDialogElement.classList.contains('hidden')) {
+          closeAlbumEditDialog();
+        } else if (modalElement && !modalElement.classList.contains('hidden')) {
+          closeAlbumListModal();
+        }
+      }
+    });
+  }
+
+  ensureEditDialogDOM();
+}
+
+/**
+ * アルバム編集用サブモーダルDOMを生成
+ */
+function ensureEditDialogDOM() {
+  if (document.getElementById('album-edit-dialog-overlay')) return;
+
+  const html = `
+    <div id="album-edit-dialog-overlay" class="modal-overlay hidden" style="z-index: 2600;" role="dialog" aria-modal="true" aria-label="アルバムを編集">
+      <div class="modal-card" style="max-width: 480px; width: 92%; max-height: 88vh; background: rgba(255, 255, 255, 0.98); border-radius: 20px; box-shadow: 0 20px 48px rgba(0,0,0,0.25);">
+        <header class="modal-header" style="padding: 1.1rem 1.3rem; border-bottom: 1px solid rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="album-modal-icon-badge" style="width: 32px; height: 32px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+              </svg>
+            </div>
+            <h3 class="modal-title" style="font-size: 1.05rem; margin: 0; font-weight: 700; color: #0f172a;">アルバムを編集</h3>
+          </div>
+          <button id="btn-close-album-edit" class="btn-icon-close" type="button" aria-label="閉じる">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
         </header>
 
-        <!-- 検索 & 並び替えツールバー -->
-        <div class="album-modal-toolbar">
-          <div class="album-modal-search-box">
-            <svg class="album-modal-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="text" id="album-modal-search-input" class="album-modal-search-input" placeholder="アルバム名を検索..." />
-            <button id="btn-clear-album-search" class="album-modal-clear-search hidden" type="button" aria-label="検索クリア">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
+        <div class="modal-body" style="padding: 1.25rem; overflow-y: auto;">
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label for="album-edit-name-input" class="form-label" style="font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 6px; display: block;">アルバム名</label>
+            <input type="text" id="album-edit-name-input" class="form-input" style="width: 100%; box-sizing: border-box; font-size: 0.92rem;" placeholder="アルバム名を入力" />
           </div>
-          <div class="album-modal-sort-box">
-            <select id="album-modal-sort-select" class="album-modal-sort-select" aria-label="並び替え順">
-              <option value="newest">時期が新しい順</option>
-              <option value="oldest">時期が古い順</option>
-              <option value="count">スポットが多い順</option>
-              <option value="name">名前順</option>
-            </select>
+
+          <div class="form-group" style="margin-bottom: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label class="form-label" style="font-size: 0.85rem; font-weight: 700; color: #334155; margin: 0;">代表サムネイル写真</label>
+              <span id="album-edit-photo-count" style="font-size: 0.75rem; color: #64748b;">(0枚)</span>
+            </div>
+            <p style="font-size: 0.76rem; color: #94a3b8; margin: 0 0 10px 0;">一覧で表示するカバー写真をクリックして選択してください</p>
+            <div id="album-edit-photos-grid" class="album-edit-photos-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; max-height: 220px; overflow-y: auto; padding: 6px; background: #f8fafc; border-radius: 12px; border: 1px solid rgba(0,0,0,0.08);">
+              <!-- 写真一覧 -->
+            </div>
           </div>
         </div>
 
-        <!-- アルバムグリッド本体 -->
-        <div class="modal-body album-modal-body">
-          <div id="album-modal-grid" class="album-modal-grid"></div>
-        </div>
+        <footer class="modal-footer" style="display: flex; gap: 10px; padding: 1rem 1.25rem; border-top: 1px solid rgba(0,0,0,0.06); background: #ffffff;">
+          <button type="button" id="btn-cancel-album-edit" class="btn-secondary" style="flex: 1; padding: 10px; border-radius: 10px; font-weight: 600; cursor: pointer;">キャンセル</button>
+          <button type="button" id="btn-save-album-edit" class="btn-primary" style="flex: 1; padding: 10px; border-radius: 10px; font-weight: 700; cursor: pointer; background: #2563eb; color: #ffffff;">変更を保存</button>
+        </footer>
       </div>
     </div>
   `;
 
   document.body.insertAdjacentHTML('beforeend', html);
-  modalElement = document.getElementById('album-list-modal');
+  editDialogElement = document.getElementById('album-edit-dialog-overlay');
 
-  // イベントバインド
-  const btnClose = document.getElementById('btn-close-album-modal');
-  const searchInput = document.getElementById('album-modal-search-input');
-  const btnClearSearch = document.getElementById('btn-clear-album-search');
-  const sortSelect = document.getElementById('album-modal-sort-select');
+  document.getElementById('btn-close-album-edit')?.addEventListener('click', closeAlbumEditDialog);
+  document.getElementById('btn-cancel-album-edit')?.addEventListener('click', closeAlbumEditDialog);
 
-  btnClose?.addEventListener('click', closeAlbumListModal);
-
-  // 背景クリックで閉じる
-  modalElement?.addEventListener('click', (e) => {
-    if (e.target === modalElement) {
-      closeAlbumListModal();
+  editDialogElement?.addEventListener('click', (e) => {
+    if (e.target === editDialogElement) {
+      closeAlbumEditDialog();
     }
   });
 
-  // 検索入力
-  searchInput?.addEventListener('input', (e) => {
-    currentSearchQuery = e.target.value.trim();
-    if (btnClearSearch) {
-      btnClearSearch.classList.toggle('hidden', !currentSearchQuery);
+  document.getElementById('btn-save-album-edit')?.addEventListener('click', handleSaveAlbumEdit);
+}
+
+/**
+ * アルバム編集ダイアログを開く
+ * @param {Object} album 
+ */
+function openAlbumEditDialog(album) {
+  ensureEditDialogDOM();
+  editingAlbum = album;
+  selectedCoverUrl = album.coverPhoto || null;
+
+  const nameInput = document.getElementById('album-edit-name-input');
+  const countEl = document.getElementById('album-edit-photo-count');
+  const gridEl = document.getElementById('album-edit-photos-grid');
+
+  if (nameInput) {
+    nameInput.value = album.name;
+  }
+
+  // アルバム内の全写真 URL を抽出
+  const allPhotos = [];
+  album.memories.forEach(m => {
+    if (Array.isArray(m.imageUrls)) {
+      m.imageUrls.forEach(url => {
+        if (url && !allPhotos.includes(url)) {
+          allPhotos.push(url);
+        }
+      });
     }
-    renderGrid();
   });
 
-  // 検索クリア
-  btnClearSearch?.addEventListener('click', () => {
-    currentSearchQuery = '';
-    if (searchInput) searchInput.value = '';
-    btnClearSearch.classList.add('hidden');
-    renderGrid();
-  });
+  if (countEl) {
+    countEl.textContent = `(${allPhotos.length}枚)`;
+  }
 
-  // 並び替え変更
-  sortSelect?.addEventListener('change', (e) => {
-    currentSortBy = e.target.value;
-    renderGrid();
-  });
+  if (gridEl) {
+    if (allPhotos.length === 0) {
+      gridEl.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 1.5rem; color: #94a3b8; font-size: 0.8rem;">
+          このアルバムの写真はありません
+        </div>
+      `;
+    } else {
+      gridEl.innerHTML = allPhotos.map(url => {
+        const isSelected = selectedCoverUrl === url;
+        return `
+          <div class="album-edit-thumb-item ${isSelected ? 'selected' : ''}" data-url="${url}" style="position: relative; width: 100%; aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer; border: 2.5px solid ${isSelected ? '#2563eb' : 'transparent'}; box-sizing: border-box; transition: all 0.15s ease;">
+            <img src="${url}" alt="サムネイル候補" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+            <div class="album-edit-thumb-check" style="position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; background: #2563eb; color: white; display: ${isSelected ? 'flex' : 'none'}; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+          </div>
+        `;
+      }).join('');
 
-  // Escキー
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && modalElement && !modalElement.classList.contains('hidden')) {
-      closeAlbumListModal();
+      // サムネイルクリックで選択
+      gridEl.querySelectorAll('.album-edit-thumb-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const url = item.getAttribute('data-url');
+          selectedCoverUrl = url;
+
+          gridEl.querySelectorAll('.album-edit-thumb-item').forEach(other => {
+            const isTarget = other.getAttribute('data-url') === url;
+            other.style.borderColor = isTarget ? '#2563eb' : 'transparent';
+            const check = other.querySelector('.album-edit-thumb-check');
+            if (check) check.style.display = isTarget ? 'flex' : 'none';
+          });
+        });
+      });
     }
-  });
+  }
+
+  if (editDialogElement) {
+    editDialogElement.classList.remove('hidden');
+  }
+}
+
+/**
+ * アルバム編集ダイアログを閉じる
+ */
+function closeAlbumEditDialog() {
+  if (editDialogElement) {
+    editDialogElement.classList.add('hidden');
+  }
+  editingAlbum = null;
+  selectedCoverUrl = null;
+}
+
+/**
+ * 編集の保存実行
+ */
+async function handleSaveAlbumEdit() {
+  if (!editingAlbum) return;
+
+  const nameInput = document.getElementById('album-edit-name-input');
+  const btnSave = document.getElementById('btn-save-album-edit');
+  const newName = (nameInput?.value || '').trim();
+
+  if (!newName) {
+    alert('アルバム名を入力してください。');
+    return;
+  }
+
+  const oldName = editingAlbum.name;
+  const coverUrl = selectedCoverUrl;
+
+  try {
+    if (btnSave) {
+      btnSave.disabled = true;
+      btnSave.textContent = '保存中...';
+    }
+
+    if (typeof onUpdateAlbumCallback === 'function') {
+      await onUpdateAlbumCallback(oldName, newName, coverUrl);
+    }
+
+    // キャッシュ内の思い出も同期
+    cachedMemories.forEach(m => {
+      if ((m.album || '').trim() === oldName) {
+        m.album = newName;
+        if (coverUrl && Array.isArray(m.imageUrls) && m.imageUrls.includes(coverUrl)) {
+          // カバー写真を先頭に移動
+          m.imageUrls = [coverUrl, ...m.imageUrls.filter(u => u !== coverUrl)];
+        }
+      }
+    });
+
+    closeAlbumEditDialog();
+    renderGrid();
+  } catch (err) {
+    console.error('[AlbumModal] アルバム更新エラー:', err);
+    alert('アルバムの更新に失敗しました: ' + err.message);
+  } finally {
+    if (btnSave) {
+      btnSave.disabled = false;
+      btnSave.textContent = '変更を保存';
+    }
+  }
 }
 
 /**
@@ -287,38 +506,84 @@ function renderGrid() {
               </div>
             `}
           </div>
-          <div class="album-card-footer">
-            <span class="album-card-select-label">地図でルートを見る</span>
-            <svg class="album-card-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-              <polyline points="12 5 19 12 12 19"></polyline>
-            </svg>
+
+          <!-- アクションボタングループ -->
+          <div class="album-card-actions-group" style="display: flex; gap: 5px; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.06);">
+            <button type="button" class="btn-card-action btn-card-tour" title="ツアー再生" style="flex: 1; padding: 6px 4px; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; font-size: 0.72rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: opacity 0.2s;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              <span>ツアー</span>
+            </button>
+            <button type="button" class="btn-card-action btn-card-photobook" title="フォトブック" style="flex: 1; padding: 6px 4px; background: #f1f5f9; color: #1e293b; border: 1px solid rgba(0,0,0,0.06); border-radius: 8px; font-size: 0.72rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: background 0.2s;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+              <span>旅本</span>
+            </button>
+            <button type="button" class="btn-card-action btn-card-edit" title="編集" style="padding: 6px 8px; background: #f8fafc; color: #475569; border: 1px solid rgba(0,0,0,0.06); border-radius: 8px; font-size: 0.72rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 3px; transition: background 0.2s;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+              </svg>
+              <span>編集</span>
+            </button>
           </div>
         </div>
       </div>
     `;
   }).join('');
 
-  // カードクリックイベントバインド
+  // カードおよびアクションボタンのイベントバインド
   grid.querySelectorAll('.album-grid-card').forEach(card => {
-    const clickHandler = () => {
-      const albumName = card.getAttribute('data-album-name');
-      if (!albumName) return;
+    const albumName = card.getAttribute('data-album-name');
+    if (!albumName) return;
 
-      const targetAlbum = albums.find(a => a.name === albumName);
+    const targetAlbum = albums.find(a => a.name === albumName);
+    if (!targetAlbum) return;
+
+    // カード全体クリック（地図へ遷移してルート表示）
+    const handleCardSelect = () => {
       closeAlbumListModal();
-
       if (typeof onSelectAlbumCallback === 'function') {
-        onSelectAlbumCallback(albumName, targetAlbum ? targetAlbum.memories : []);
+        onSelectAlbumCallback(albumName, targetAlbum.memories);
       }
     };
 
-    card.addEventListener('click', clickHandler);
+    card.addEventListener('click', handleCardSelect);
     card.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
+        if (e.target.classList.contains('btn-card-action')) return;
         e.preventDefault();
-        clickHandler();
+        handleCardSelect();
       }
+    });
+
+    // 1. ツアー再生ボタン
+    const btnTour = card.querySelector('.btn-card-tour');
+    btnTour?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAlbumListModal();
+      if (typeof onPlayTourCallback === 'function') {
+        onPlayTourCallback(targetAlbum.memories);
+      }
+    });
+
+    // 2. フォトブックボタン
+    const btnPhotobook = card.querySelector('.btn-card-photobook');
+    btnPhotobook?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAlbumListModal();
+      if (typeof onOpenPhotobookCallback === 'function') {
+        onOpenPhotobookCallback(albumName, targetAlbum.memories);
+      }
+    });
+
+    // 3. 編集ボタン
+    const btnEdit = card.querySelector('.btn-card-edit');
+    btnEdit?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openAlbumEditDialog(targetAlbum);
     });
   });
 }
@@ -326,12 +591,23 @@ function renderGrid() {
 /**
  * アルバム一覧モーダルを開く
  * @param {Array<Object>} memories 全思い出データ配列
- * @param {Function} onSelectAlbum (albumName, albumMemories) => void
+ * @param {Function|Object} optionsOrSelect onSelectAlbum コールバック または オプションオブジェクト
  */
-export function openAlbumListModal(memories = [], onSelectAlbum = null) {
+export function openAlbumListModal(memories = [], optionsOrSelect = null) {
   ensureModalDOM();
   cachedMemories = Array.isArray(memories) ? memories : [];
-  onSelectAlbumCallback = onSelectAlbum;
+
+  if (typeof optionsOrSelect === 'function') {
+    onSelectAlbumCallback = optionsOrSelect;
+    onPlayTourCallback = null;
+    onOpenPhotobookCallback = null;
+    onUpdateAlbumCallback = null;
+  } else if (optionsOrSelect && typeof optionsOrSelect === 'object') {
+    onSelectAlbumCallback = optionsOrSelect.onSelectAlbum || null;
+    onPlayTourCallback = optionsOrSelect.onPlayTour || null;
+    onOpenPhotobookCallback = optionsOrSelect.onOpenPhotobook || null;
+    onUpdateAlbumCallback = optionsOrSelect.onUpdateAlbum || null;
+  }
 
   currentSearchQuery = '';
   const searchInput = document.getElementById('album-modal-search-input');
