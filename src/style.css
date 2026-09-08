@@ -1823,10 +1823,10 @@
     top: 0 !important;
     left: 0 !important;
     bottom: 0 !important;
-    width: min(86vw, 340px) !important;
+    width: min(88vw, 360px) !important;
     height: 100% !important;
     height: 100dvh !important;
-    border-radius: 0 20px 20px 0 !important;
+    border-radius: 0 24px 24px 0 !important;
     border-top: none !important;
     border-bottom: none !important;
     border-left: none !important;
@@ -1862,8 +1862,10 @@
     pointer-events: auto;
   }
 
+  /* サイドバーヘッダー */
   .sidebar-header {
-    padding: calc(1rem + env(safe-area-inset-top, 0px)) 1.2rem 1rem 1.2rem !important;
+    padding: calc(1rem + env(safe-area-inset-top, 0px)) 1.25rem 0.9rem 1.25rem !important;
+    gap: 6px !important;
   }
 
   .sidebar-header-top-row {
@@ -1873,12 +1875,27 @@
     width: 100%;
   }
 
+  .sidebar-header h2 {
+    font-size: 1.3rem !important;
+  }
+
+  .sidebar-stats-badge {
+    font-size: 0.78rem !important;
+    padding: 4px 10px !important;
+    margin-top: 4px !important;
+  }
+
+  .stats-badge-item svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
   .sidebar-btn-close {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: 40px !important;
+    height: 40px !important;
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.05);
     border: none;
@@ -1894,8 +1911,194 @@
     transform: scale(0.94);
   }
 
+  /* アクションボタン（アルバム一覧・ツアー再生・フォトブック）の押しやすさ拡大 */
+  .sidebar-quick-actions {
+    margin-top: 10px !important;
+    gap: 8px !important;
+  }
+
+  .btn-action-card-primary {
+    min-height: 48px !important;
+    padding: 11px 15px !important;
+    font-size: 0.9rem !important;
+    border-radius: 14px !important;
+  }
+
+  .btn-action-card-primary .action-card-icon {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .quick-actions-row {
+    gap: 8px !important;
+  }
+
+  .btn-action-card-sub {
+    min-height: 46px !important;
+    padding: 10px 14px !important;
+    font-size: 0.84rem !important;
+    border-radius: 12px !important;
+    gap: 6px !important;
+  }
+
+  .btn-action-card-sub svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  /* スクロール領域 */
   .sidebar-content {
-    padding: 1rem 1.2rem calc(1rem + env(safe-area-inset-bottom, 0px)) 1.2rem !important;
+    padding: 1.15rem 1.25rem !important;
+  }
+
+  /* 検索バー（iOSでのズーム防止 16px 以上） */
+  .sidebar-search-box {
+    margin-bottom: 1.35rem !important;
+  }
+
+  .sidebar-search-input {
+    font-size: 16px !important;
+    min-height: 46px !important;
+    padding: 10px 38px 10px 38px !important;
+    border-radius: 14px !important;
+  }
+
+  .sidebar-search-icon {
+    left: 12px !important;
+    width: 17px !important;
+    height: 17px !important;
+  }
+
+  .btn-clear-search {
+    width: 24px !important;
+    height: 24px !important;
+    right: 10px !important;
+  }
+
+  /* グループヘッダー */
+  .sidebar-group {
+    margin-bottom: 1.4rem !important;
+  }
+
+  .sidebar-group-title {
+    font-size: 0.78rem !important;
+  }
+
+  .btn-filter-reset {
+    font-size: 0.78rem !important;
+    padding: 4px 8px !important;
+  }
+
+  /* 時期フィルター（セグメントコントロール） */
+  .segmented-control {
+    padding: 4px !important;
+    border-radius: 14px !important;
+    gap: 3px !important;
+  }
+
+  .segmented-item {
+    min-height: 40px !important;
+    padding: 8px 12px !important;
+    font-size: 0.84rem !important;
+    border-radius: 10px !important;
+  }
+
+  /* タグクラウド（タップしやすいパディングとサイズ） */
+  .sidebar-tag-cloud {
+    gap: 8px !important;
+  }
+
+  .sidebar-tag-chip {
+    min-height: 38px !important;
+    padding: 7px 14px !important;
+    font-size: 0.84rem !important;
+    border-radius: 10px !important;
+    gap: 5px !important;
+  }
+
+  .sidebar-tag-chip .tag-count {
+    font-size: 0.74rem !important;
+  }
+
+  /* 拠点バー（最下部ユーティリティ） */
+  .sidebar-group-home {
+    margin-top: 1.6rem !important;
+    padding-top: 1rem !important;
+    margin-bottom: 0.8rem !important;
+  }
+
+  .sidebar-home-bar {
+    min-height: 46px !important;
+    padding: 8px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  .home-bar-icon {
+    width: 26px !important;
+    height: 26px !important;
+    border-radius: 7px !important;
+  }
+
+  .home-bar-label {
+    font-size: 0.82rem !important;
+  }
+
+  .home-bar-sub {
+    font-size: 0.7rem !important;
+  }
+
+  .home-bar-btn {
+    min-height: 36px !important;
+    padding: 6px 12px !important;
+    font-size: 0.76rem !important;
+    border-radius: 7px !important;
+  }
+
+  .home-bar-btn-clear {
+    width: 26px !important;
+    height: 26px !important;
+  }
+
+  /* ユーザーフッター（認証・同期） */
+  .sidebar-auth-footer {
+    padding: 0.95rem 1.25rem calc(0.95rem + env(safe-area-inset-bottom, 0px)) 1.25rem !important;
+  }
+
+  .auth-user-avatar, .auth-user-avatar-fallback {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 0.85rem !important;
+  }
+
+  .auth-user-name {
+    font-size: 0.84rem !important;
+  }
+
+  .auth-sync-status {
+    font-size: 0.74rem !important;
+    gap: 6px !important;
+  }
+
+  .auth-sync-indicator {
+    width: 7px !important;
+    height: 7px !important;
+  }
+
+  .btn-auth-action {
+    min-height: 38px !important;
+    padding: 6px 12px !important;
+    font-size: 0.76rem !important;
+    border-radius: 8px !important;
+  }
+
+  .btn-google-login {
+    min-height: 46px !important;
+    padding: 10px 14px !important;
+    font-size: 0.86rem !important;
+  }
+
+  .auth-login-note {
+    font-size: 0.74rem !important;
   }
 
   /* ------------------------------
@@ -1908,8 +2111,8 @@
     top: calc(12px + env(safe-area-inset-top, 0px));
     left: 12px;
     z-index: 2500;
-    width: 44px;
-    height: 44px;
+    width: 46px !important;
+    height: 46px !important;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.94);
     backdrop-filter: blur(12px);
@@ -1938,9 +2141,14 @@
   .map-search-bar {
     width: calc(100vw - 80px) !important;
     max-width: calc(100vw - 80px) !important;
-    padding: 6px 10px;
-    height: 44px;
+    padding: 6px 12px;
+    height: 46px !important;
     box-sizing: border-box;
+    font-size: 16px !important;
+  }
+
+  .map-search-bar input {
+    font-size: 16px !important;
   }
 
   .map-search-bar:focus-within {
@@ -1950,15 +2158,15 @@
 
   /* 右下コントロール（GPS & ズームボタン） */
   .leaflet-bottom.leaflet-right {
-    margin-bottom: calc(82px + env(safe-area-inset-bottom, 0px)) !important;
+    margin-bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
     margin-right: 12px !important;
   }
 
   .map-gps-btn {
     width: 46px !important;
     height: 46px !important;
-    min-width: 44px;
-    min-height: 44px;
+    min-width: 46px !important;
+    min-height: 46px !important;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
   }
 
@@ -1969,10 +2177,10 @@
   }
 
   .leaflet-control-zoom a {
-    width: 44px !important;
-    height: 44px !important;
-    line-height: 44px !important;
-    font-size: 20px !important;
+    width: 46px !important;
+    height: 46px !important;
+    line-height: 46px !important;
+    font-size: 22px !important;
   }
 
   /* 下部中央の「ここで記録」ボタン (FAB) */
@@ -1983,9 +2191,9 @@
   }
 
   .fab-record-btn {
-    padding: 12px 24px !important;
-    font-size: 0.95rem !important;
-    min-height: 46px !important;
+    padding: 13px 26px !important;
+    font-size: 0.98rem !important;
+    min-height: 48px !important;
     box-shadow: 0 8px 24px -2px rgba(37, 99, 235, 0.5) !important;
   }
 
@@ -2008,7 +2216,17 @@
   }
 
   .memory-popup-image-box {
-    height: 125px !important;
+    height: 135px !important;
+  }
+
+  .memory-popup-title {
+    font-size: 0.96rem !important;
+  }
+
+  .memory-popup-actions button {
+    min-height: 38px !important;
+    padding: 7px 14px !important;
+    font-size: 0.8rem !important;
   }
 
   /* ------------------------------
@@ -2041,7 +2259,7 @@
   }
 
   .modal-header {
-    padding: 1rem 1.25rem !important;
+    padding: 1.1rem 1.25rem !important;
     position: sticky !important;
     top: 0 !important;
     background: rgba(255, 255, 255, 0.96) !important;
@@ -2051,20 +2269,33 @@
   }
 
   .modal-body {
-    padding: 1rem 1.25rem !important;
+    padding: 1.15rem 1.25rem !important;
     padding-bottom: 2rem !important;
     -webkit-overflow-scrolling: touch;
   }
 
+  .modal-body input,
+  .modal-body textarea,
+  .modal-body select {
+    font-size: 16px !important;
+    min-height: 44px !important;
+  }
+
   .modal-footer {
-    padding: 0.85rem 1.25rem !important;
-    padding-bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding: 0.9rem 1.25rem !important;
+    padding-bottom: calc(0.9rem + env(safe-area-inset-bottom, 0px)) !important;
     position: sticky !important;
     bottom: 0 !important;
     background: rgba(255, 255, 255, 0.96) !important;
     backdrop-filter: blur(8px) !important;
     -webkit-backdrop-filter: blur(8px) !important;
     z-index: 10 !important;
+    gap: 8px !important;
+  }
+
+  .modal-footer button {
+    min-height: 46px !important;
+    font-size: 0.92rem !important;
   }
 
   .form-row {
@@ -2079,13 +2310,18 @@
   }
 
   .album-modal-toolbar {
-    padding: 10px 1.25rem !important;
+    padding: 12px 1.25rem !important;
     flex-direction: column !important;
-    gap: 8px !important;
+    gap: 10px !important;
   }
 
   .album-modal-search-box {
     width: 100% !important;
+  }
+
+  .album-modal-search-input {
+    font-size: 16px !important;
+    min-height: 44px !important;
   }
 
   .album-modal-sort-box {
@@ -2094,6 +2330,8 @@
 
   .album-modal-sort-select {
     width: 100% !important;
+    min-height: 44px !important;
+    font-size: 16px !important;
   }
 
   .album-modal-body {
@@ -2102,25 +2340,31 @@
   }
 
   .album-modal-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important;
     gap: 12px !important;
   }
 
   .album-card-thumb-wrapper {
-    height: 110px !important;
+    height: 115px !important;
   }
 
   .album-card-info {
-    padding: 10px !important;
+    padding: 11px !important;
   }
 
   .album-card-name {
-    font-size: 0.88rem !important;
+    font-size: 0.92rem !important;
   }
 
   .album-card-date-row {
-    font-size: 0.7rem !important;
+    font-size: 0.74rem !important;
     margin-bottom: 8px !important;
+  }
+
+  .album-card-action-btn {
+    min-height: 38px !important;
+    padding: 6px 10px !important;
+    font-size: 0.78rem !important;
   }
 }
 
