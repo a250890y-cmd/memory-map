@@ -232,10 +232,36 @@ function setupHeaderActions(map) {
     closeSidebarIfMobile();
     openAlbumListModal(allMemoriesCache, {
       onSelectAlbum: (albumName, albumMemories) => {
+        if (!albumName) {
+          // すべてのアルバム・思い出を表示（全ピン表示に戻す）
+          currentFilteredMemories = allMemoriesCache;
+          clearRouteLine();
+          renderAppMarkers(allMemoriesCache);
+
+          const validLatLngs = allMemoriesCache
+            .filter(m => typeof m.lat === 'number' && typeof m.lng === 'number')
+            .map(m => [m.lat, m.lng]);
+
+          if (validLatLngs.length === 1) {
+            flyToLocation(validLatLngs[0][0], validLatLngs[0][1], 13);
+          } else if (validLatLngs.length > 1) {
+            map.fitBounds(validLatLngs, {
+              padding: [50, 50],
+              maxZoom: 15,
+              animate: true
+            });
+          }
+
+          // サイドバーの絞り込み表示をリセット
+          setAlbumFilter('');
+          return;
+        }
+
+        // 特定アルバム選択時
         currentFilteredMemories = albumMemories;
         renderAppMarkers(albumMemories);
 
-        if (albumName && albumMemories && albumMemories.length > 0) {
+        if (albumMemories && albumMemories.length > 0) {
           drawRouteLine(albumMemories);
           const latlngs = albumMemories
             .filter(m => typeof m.lat === 'number' && typeof m.lng === 'number')
@@ -413,13 +439,58 @@ async function bootstrap() {
         const filterState = getFilterState();
         if (filterState && filterState.selectedAlbum) {
           drawRouteLine(filteredMemories);
+          const latlngs = filteredMemories
+            .filter(m => typeof m.lat === 'number' && typeof m.lng === 'number')
+            .map(m => [m.lat, m.lng]);
+          if (latlngs.length === 1) {
+            flyToLocation(latlngs[0][0], latlngs[0][1], 13);
+          } else if (latlngs.length > 1) {
+            map.fitBounds(latlngs, {
+              padding: [60, 60],
+              maxZoom: 15,
+              animate: true
+            });
+          }
         } else {
           clearRouteLine();
+          const validLatLngs = filteredMemories
+            .filter(m => typeof m.lat === 'number' && typeof m.lng === 'number')
+            .map(m => [m.lat, m.lng]);
+          if (validLatLngs.length === 1) {
+            flyToLocation(validLatLngs[0][0], validLatLngs[0][1], 13);
+          } else if (validLatLngs.length > 1) {
+            map.fitBounds(validLatLngs, {
+              padding: [50, 50],
+              maxZoom: 15,
+              animate: true
+            });
+          }
         }
       },
       onAlbumSelect: (albumName, albumMemories) => {
+        if (!albumName) {
+          currentFilteredMemories = allMemoriesCache;
+          clearRouteLine();
+          renderAppMarkers(allMemoriesCache);
+          const validLatLngs = allMemoriesCache
+            .filter(m => typeof m.lat === 'number' && typeof m.lng === 'number')
+            .map(m => [m.lat, m.lng]);
+          if (validLatLngs.length === 1) {
+            flyToLocation(validLatLngs[0][0], validLatLngs[0][1], 13);
+          } else if (validLatLngs.length > 1) {
+            map.fitBounds(validLatLngs, {
+              padding: [50, 50],
+              maxZoom: 15,
+              animate: true
+            });
+          }
+          setAlbumFilter('');
+          return;
+        }
+
         currentFilteredMemories = albumMemories;
-        if (albumName && albumMemories && albumMemories.length > 0) {
+        renderAppMarkers(albumMemories);
+        if (albumMemories && albumMemories.length > 0) {
           drawRouteLine(albumMemories);
           const latlngs = albumMemories
             .filter(m => typeof m.lat === 'number' && typeof m.lng === 'number')

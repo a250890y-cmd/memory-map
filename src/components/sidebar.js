@@ -129,6 +129,25 @@ function renderSidebarUI() {
 
   // HTML 構築
   sidebarContainer.innerHTML = `
+    <!-- アルバム絞り込み表示バッジ（解除ボタン付き） -->
+    ${filterState.selectedAlbum ? `
+      <div class="sidebar-album-filter-badge" style="display: flex; align-items: center; justify-content: space-between; background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.2); padding: 7px 12px; border-radius: 12px; margin-bottom: 10px; font-size: 0.8rem; color: #1e40af;">
+        <div style="display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span style="font-weight: 600; color: #1e3a8a; white-space: nowrap; flex-shrink: 0;">絞り込み中:</span>
+          <span style="font-weight: 700; color: #2563eb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${filterState.selectedAlbum}">${filterState.selectedAlbum}</span>
+        </div>
+        <button id="btn-clear-album-filter" type="button" style="background: none; border: none; cursor: pointer; padding: 3px; border-radius: 6px; color: #64748b; display: flex; align-items: center; justify-content: center; margin-left: 6px; flex-shrink: 0; transition: color 0.15s;" title="アルバム絞り込みを解除">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    ` : ''}
+
     <!-- 検索バー -->
     <div class="sidebar-search-box">
       <svg class="sidebar-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -239,6 +258,14 @@ function renderSidebarUI() {
  * イベントリスナーの登録
  */
 function bindSidebarEvents(albumsMap) {
+  // アルバム絞り込み解除ボタン
+  const btnClearAlbum = document.getElementById('btn-clear-album-filter');
+  if (btnClearAlbum) {
+    btnClearAlbum.addEventListener('click', () => {
+      setAlbumFilter('');
+    });
+  }
+
   // 検索入力
   const searchInput = document.getElementById('sidebar-search-input');
   if (searchInput) {

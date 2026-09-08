@@ -120,6 +120,21 @@ function ensureModalDOM() {
             </div>
           </div>
 
+          <!-- すべてのアルバム・思い出を表示バナー（全ピン表示に戻す） -->
+          <div class="album-modal-reset-banner" style="padding: 0 1.5rem 0.75rem 1.5rem;">
+            <button type="button" id="btn-show-all-memories" class="btn-show-all-memories" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(37, 99, 235, 0.05); border: 1px dashed rgba(37, 99, 235, 0.35); border-radius: 12px; color: #1e40af; cursor: pointer; transition: all 0.2s; font-size: 0.85rem; font-weight: 600;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="2" y1="12" x2="22" y2="12"></line>
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+                <span>すべてのアルバム・思い出を表示（全ピン表示に戻す）</span>
+              </div>
+              <span id="album-modal-all-count-badge" style="font-size: 0.75rem; background: rgba(37, 99, 235, 0.1); color: #2563eb; padding: 2px 8px; border-radius: 10px; font-weight: 700;">全 0 件</span>
+            </button>
+          </div>
+
           <!-- アルバムグリッド本体 -->
           <div class="modal-body album-modal-body">
             <div id="album-modal-grid" class="album-modal-grid"></div>
@@ -136,8 +151,16 @@ function ensureModalDOM() {
     const searchInput = document.getElementById('album-modal-search-input');
     const btnClearSearch = document.getElementById('btn-clear-album-search');
     const sortSelect = document.getElementById('album-modal-sort-select');
+    const btnShowAll = document.getElementById('btn-show-all-memories');
 
     btnClose?.addEventListener('click', closeAlbumListModal);
+
+    btnShowAll?.addEventListener('click', () => {
+      closeAlbumListModal();
+      if (typeof onSelectAlbumCallback === 'function') {
+        onSelectAlbumCallback(null, cachedMemories);
+      }
+    });
 
     modalElement?.addEventListener('click', (e) => {
       if (e.target === modalElement) {
@@ -526,6 +549,11 @@ function renderGrid() {
 
   if (badgeTotal) {
     badgeTotal.textContent = String(rawAlbums.length);
+  }
+
+  const badgeAllCount = document.getElementById('album-modal-all-count-badge');
+  if (badgeAllCount) {
+    badgeAllCount.textContent = `全 ${cachedMemories.length} 件`;
   }
 
   // 1. 検索フィルター
