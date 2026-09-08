@@ -316,20 +316,30 @@ async function handleSaveAlbumEdit() {
       btnSave.textContent = '保存中...';
     }
 
+    let updatedAllMemories = null;
     if (typeof onUpdateAlbumCallback === 'function') {
-      await onUpdateAlbumCallback(oldName, newName, coverUrl);
+      updatedAllMemories = await onUpdateAlbumCallback(oldName, newName, coverUrl);
     }
 
-    // キャッシュ内の思い出も同期
-    cachedMemories.forEach(m => {
-      if ((m.album || '').trim() === oldName) {
-        m.album = newName;
-        if (coverUrl && Array.isArray(m.imageUrls) && m.imageUrls.includes(coverUrl)) {
-          // カバー写真を先頭に移動
-          m.imageUrls = [coverUrl, ...m.imageUrls.filter(u => u !== coverUrl)];
+    if (Array.isArray(updatedAllMemories) && updatedAllMemories.length > 0) {
+      cachedMemories = updatedAllMemories;
+    } else {
+      // キャッシュ内の思い出も同期
+      cachedMemories.forEach(m => {
+        if ((m.album || '').trim() === oldName) {
+          m.album = newName;
+          m.albumCoverPhoto = coverUrl;
+          m.coverPhoto = coverUrl;
+          if (coverUrl && Array.isArray(m.imageUrls) && m.imageUrls.includes(coverUrl)) {
+            // カバー写真を先頭に移動
+            m.imageUrls = [coverUrl, ...m.imageUrls.filter(u => u !== coverUrl)];
+            m.isCoverPhoto = true;
+          } else {
+            m.isCoverPhoto = false;
+          }
         }
-      }
-    });
+      });
+    }
 
     closeAlbumEditDialog();
     renderGrid();
@@ -362,6 +372,7 @@ function extractAlbumList(memories = []) {
         count: 0,
         memories: [],
         coverPhoto: null,
+        explicitCoverPhoto: null,
         minTimestamp: Infinity,
         maxTimestamp: -Infinity
       };
@@ -371,7 +382,18 @@ function extractAlbumList(memories = []) {
     item.count += 1;
     item.memories.push(mem);
 
-    // カバー写真の抽出（写真配列の先頭）
+    // 明示的なカバー写真（albumCoverPhoto / coverPhoto / isCoverPhoto）の検出
+    if (!item.explicitCoverPhoto) {
+      if (mem.albumCoverPhoto) {
+        item.explicitCoverPhoto = mem.albumCoverPhoto;
+      } else if (mem.isCoverPhoto && Array.isArray(mem.imageUrls) && mem.imageUrls.length > 0) {
+        item.explicitCoverPhoto = mem.imageUrls[0];
+      } else if (mem.coverPhoto) {
+        item.explicitCoverPhoto = mem.coverPhoto;
+      }
+    }
+
+    // デフォルトフォールバック用の先頭写真
     if (!item.coverPhoto && Array.isArray(mem.imageUrls) && mem.imageUrls.length > 0) {
       item.coverPhoto = mem.imageUrls[0];
     }
@@ -388,6 +410,9 @@ function extractAlbumList(memories = []) {
   });
 
   return Object.values(map).map(album => {
+    // 明示的なカバー指定がある場合は最優先で採用
+    const finalCoverPhoto = album.explicitCoverPhoto || album.coverPhoto;
+
     let dateRangeStr = '';
     if (album.minTimestamp !== Infinity && album.maxTimestamp !== -Infinity) {
       const dMin = new Date(album.minTimestamp);
@@ -400,6 +425,7 @@ function extractAlbumList(memories = []) {
 
     return {
       ...album,
+      coverPhoto: finalCoverPhoto,
       dateRangeStr
     };
   });

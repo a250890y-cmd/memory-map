@@ -121,27 +121,31 @@ async function refreshAllData() {
  * @param {string|null} coverPhotoUrl 
  */
 async function handleUpdateAlbum(oldAlbumName, newAlbumName, coverPhotoUrl) {
-  if (!oldAlbumName || !newAlbumName) return;
+  if (!oldAlbumName || !newAlbumName) return allMemoriesCache;
 
   const trimmedOld = oldAlbumName.trim();
   const trimmedNew = newAlbumName.trim();
 
   // 1. 対象の思い出を抽出して更新
   const targetMemories = allMemoriesCache.filter(m => (m.album || '').trim() === trimmedOld);
-  if (targetMemories.length === 0) return;
+  if (targetMemories.length === 0) return allMemoriesCache;
 
   const updatedMemories = [];
 
   targetMemories.forEach(mem => {
     const updated = {
       ...mem,
-      album: trimmedNew
+      album: trimmedNew,
+      albumCoverPhoto: coverPhotoUrl,
+      coverPhoto: coverPhotoUrl
     };
 
-    // カバー写真の指定があり、その思い出の写真リストに含まれる場合は先頭に並び替え
+    // カバー写真の指定があり、その思い出の写真リストに含まれる場合は先頭に並び替えてフラグ設定
     if (coverPhotoUrl && Array.isArray(updated.imageUrls) && updated.imageUrls.includes(coverPhotoUrl)) {
       updated.imageUrls = [coverPhotoUrl, ...updated.imageUrls.filter(u => u !== coverPhotoUrl)];
-      updated.coverPhoto = coverPhotoUrl;
+      updated.isCoverPhoto = true;
+    } else {
+      updated.isCoverPhoto = false;
     }
 
     updatedMemories.push(updated);
@@ -163,7 +167,7 @@ async function handleUpdateAlbum(oldAlbumName, newAlbumName, coverPhotoUrl) {
   }
 
   // 4. 全画面データの再描画
-  await refreshAllData();
+  const freshMemories = await refreshAllData();
 
   // 5. もし現在該当アルバムでフィルタ中なら新しいアルバム名でフィルタ再設定
   const filterState = getFilterState();
@@ -173,6 +177,8 @@ async function handleUpdateAlbum(oldAlbumName, newAlbumName, coverPhotoUrl) {
     renderAppMarkers(newAlbumMems);
     drawRouteLine(newAlbumMems);
   }
+
+  return freshMemories || allMemoriesCache;
 }
 
 /**
@@ -252,7 +258,7 @@ function setupHeaderActions(map) {
         }
       },
       onUpdateAlbum: async (oldAlbumName, newAlbumName, coverPhotoUrl) => {
-        await handleUpdateAlbum(oldAlbumName, newAlbumName, coverPhotoUrl);
+        return await handleUpdateAlbum(oldAlbumName, newAlbumName, coverPhotoUrl);
       }
     });
   });
