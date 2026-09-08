@@ -562,7 +562,7 @@
    認証 & クラウド同期 UI スタイル (サイドバー下部フッター)
    -------------------------------------------------------------------------- */
 .sidebar-auth-footer {
-  padding: 0.85rem 1.25rem;
+  padding: 0.75rem 1rem;
   border-top: 1px solid rgba(0, 0, 0, 0.05);
   background: rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(12px);
@@ -607,6 +607,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  width: 100%;
 }
 
 .auth-user-header {
@@ -614,11 +615,12 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+  flex: 1;
 }
 
 .auth-user-avatar {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   object-fit: cover;
   border: 1px solid rgba(255, 255, 255, 0.8);
@@ -627,8 +629,8 @@
 }
 
 .auth-user-avatar-fallback {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: #0f172a;
   color: white;
@@ -636,16 +638,17 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   flex-shrink: 0;
 }
 
 .auth-user-info {
   min-width: 0;
+  flex: 1;
 }
 
 .auth-user-name {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 700;
   color: #0f172a;
   white-space: nowrap;
@@ -658,9 +661,16 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.67rem;
+  font-size: 0.68rem;
   color: #059669;
-  margin-top: 2px;
+  margin-top: 1px;
+  white-space: nowrap;
+}
+
+#auth-sync-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .auth-sync-indicator {
@@ -668,6 +678,7 @@
   height: 6px;
   border-radius: 50%;
   background: #059669;
+  flex-shrink: 0;
 }
 
 .auth-sync-indicator.syncing {
@@ -688,10 +699,10 @@
 }
 
 .btn-auth-action {
-  padding: 4px 7px;
-  font-size: 0.7rem;
+  padding: 3.5px 7px;
+  font-size: 0.69rem;
   font-weight: 600;
-  border-radius: 7px;
+  border-radius: 6px;
   border: 1px solid rgba(0, 0, 0, 0.06);
   background: rgba(255, 255, 255, 0.8);
   color: #475569;

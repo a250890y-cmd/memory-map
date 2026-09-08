@@ -59,7 +59,7 @@ function renderAuthUI(user) {
         </div>
         <div class="auth-user-actions">
           <button id="btn-manual-sync" class="btn-auth-action" title="クラウドと手動同期" ${isSyncing ? 'disabled' : ''}>
-            ☁️ 今すぐ同期
+            同期
           </button>
           <button id="btn-auth-logout" class="btn-auth-action logout" title="ログアウト">
             ログアウト
