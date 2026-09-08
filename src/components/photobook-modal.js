@@ -162,7 +162,9 @@ function ensurePhotobookStyles() {
       background: #f1f5f9;
       border: 1px solid rgba(0,0,0,0.06);
     }
-    .photobook-cover-thumb-box img {
+    .photobook-cover-thumb-box img,
+    .photobook-cover-img,
+    .photobook-cover-photo {
       width: 100%;
       height: 100%;
       object-fit: cover;
@@ -418,8 +420,11 @@ function createPhotobookDOM() {
 
 /**
  * フォトブックHTMLの生成
+ * @param {string} albumName 
+ * @param {Array<Object>} memories 
+ * @param {string|null} explicitCoverUrl 
  */
-function generatePhotobookHTML(albumName, memories) {
+function generatePhotobookHTML(albumName, memories, explicitCoverUrl = null) {
   // 日付順にソート
   const sorted = [...memories].sort((a, b) => {
     const tA = new Date(a.datetime || a.timestamp || 0).getTime();
@@ -443,13 +448,28 @@ function generatePhotobookHTML(albumName, memories) {
     if (Array.isArray(m.imageUrls)) allPhotos.push(...m.imageUrls);
   });
 
-  // 表紙用カバー写真の決定（albumCoverPhoto > isCoverPhoto > coverPhoto > allPhotos[0]）
-  const coverPhotoUrl = 
+  // 1. localStorage に保存されている該当アルバムのカバー写真URL
+  let storedCoverUrl = null;
+  if (albumName) {
+    try {
+      storedCoverUrl = localStorage.getItem('memory_album_cover_' + encodeURIComponent(albumName.trim()));
+    } catch (e) {
+      console.warn('[Photobook] localStorage取得エラー:', e);
+    }
+  }
+
+  // 3. アルバムに属する思い出配列（memories）の中から、albumCoverPhoto または coverPhoto / isCoverPhoto を持つ写真
+  const memoryCoverUrl =
     sorted.find(m => m.albumCoverPhoto)?.albumCoverPhoto ||
-    sorted.find(m => m.isCoverPhoto && m.imageUrls?.[0])?.imageUrls?.[0] ||
     sorted.find(m => m.coverPhoto)?.coverPhoto ||
-    allPhotos[0] ||
+    sorted.find(m => m.isCoverPhoto && Array.isArray(m.imageUrls) && m.imageUrls[0])?.imageUrls?.[0] ||
     null;
+
+  // 4. 上記が一切存在しない場合のみ、最初の写真（memories[0].imageUrls[0]）
+  const firstAvailablePhoto = (sorted[0] && Array.isArray(sorted[0].imageUrls) && sorted[0].imageUrls[0]) || allPhotos[0] || null;
+
+  // 表紙用カバー写真の決定（優先順位: 1. localStorage -> 2. 引数 coverPhotoUrl -> 3. 思い出データのカバー -> 4. 最初の写真）
+  const coverPhotoUrl = storedCoverUrl || explicitCoverUrl || memoryCoverUrl || firstAvailablePhoto;
 
   let html = '';
 
@@ -465,7 +485,7 @@ function generatePhotobookHTML(albumName, memories) {
       <div class="photobook-cover-visual-row">
         <div class="photobook-cover-thumb-box">
           ${coverPhotoUrl ? `
-            <img src="${coverPhotoUrl}" alt="${albumName || 'アルバムカバー'}" />
+            <img src="${coverPhotoUrl}" alt="${albumName || 'アルバムカバー'}" class="photobook-cover-img photobook-cover-photo" />
           ` : `
             <div class="photobook-cover-thumb-placeholder">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5">
@@ -728,9 +748,17 @@ function initPhotobookMaps(sortedMemories) {
  * フォトブックモーダルを開く
  * @param {string} albumName 
  * @param {Array<Object>} memories 
+ * @param {string|Object|null} coverPhotoUrlOrOptions
  */
-export function openPhotobookModal(albumName, memories = []) {
+export function openPhotobookModal(albumName, memories = [], coverPhotoUrlOrOptions = null) {
   createPhotobookDOM();
+
+  let explicitCoverUrl = null;
+  if (typeof coverPhotoUrlOrOptions === 'string') {
+    explicitCoverUrl = coverPhotoUrlOrOptions;
+  } else if (coverPhotoUrlOrOptions && typeof coverPhotoUrlOrOptions === 'object') {
+    explicitCoverUrl = coverPhotoUrlOrOptions.coverPhotoUrl || coverPhotoUrlOrOptions.coverPhoto || null;
+  }
 
   const titleEl = document.getElementById('photobook-toolbar-album-name');
   if (titleEl) {
@@ -746,7 +774,7 @@ export function openPhotobookModal(albumName, memories = []) {
 
   const container = document.getElementById('photobook-content-container');
   if (container) {
-    container.innerHTML = generatePhotobookHTML(albumName, sorted);
+    container.innerHTML = generatePhotobookHTML(albumName, sorted, explicitCoverUrl);
   }
 
   photobookModal.classList.remove('hidden');

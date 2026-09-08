@@ -262,9 +262,20 @@ function setupHeaderActions(map) {
           startAlbumTour(albumMemories, map);
         }
       },
-      onOpenPhotobook: (albumName, albumMemories) => {
+      onOpenPhotobook: (albumName, albumMemories, coverPhoto = null) => {
         if (albumMemories && albumMemories.length > 0) {
-          openPhotobookModal(albumName, albumMemories);
+          // localStorage や思い出配列のプロパティからカバー写真URLを特定して引き渡し
+          let coverUrl = coverPhoto;
+          if (!coverUrl && albumName) {
+            try {
+              coverUrl = localStorage.getItem('memory_album_cover_' + encodeURIComponent(albumName.trim()));
+            } catch (e) {}
+          }
+          if (!coverUrl) {
+            coverUrl = albumMemories.find(m => m.albumCoverPhoto)?.albumCoverPhoto ||
+                       albumMemories.find(m => m.coverPhoto)?.coverPhoto || null;
+          }
+          openPhotobookModal(albumName, albumMemories, coverUrl);
         }
       },
       onUpdateAlbum: async (oldAlbumName, newAlbumName, coverPhotoUrl) => {
@@ -286,7 +297,17 @@ function setupHeaderActions(map) {
     const filterState = getFilterState();
     const currentAlbum = filterState.selectedAlbum || '旅の記録';
     const targets = currentFilteredMemories.length > 0 ? currentFilteredMemories : allMemoriesCache;
-    openPhotobookModal(currentAlbum, targets);
+    let coverUrl = null;
+    if (filterState.selectedAlbum) {
+      try {
+        coverUrl = localStorage.getItem('memory_album_cover_' + encodeURIComponent(filterState.selectedAlbum.trim()));
+      } catch (e) {}
+    }
+    if (!coverUrl && targets.length > 0) {
+      coverUrl = targets.find(m => m.albumCoverPhoto)?.albumCoverPhoto ||
+                 targets.find(m => m.coverPhoto)?.coverPhoto || null;
+    }
+    openPhotobookModal(currentAlbum, targets, coverUrl);
   });
 }
 
