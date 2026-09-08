@@ -146,59 +146,6 @@ function renderSidebarUI() {
       ` : ''}
     </div>
 
-    <!-- ミニマル拠点・自宅バー (1行) -->
-    <div class="sidebar-group">
-      <div class="sidebar-group-header">
-        <span class="sidebar-group-title">拠点</span>
-      </div>
-      <div class="sidebar-home-bar ${isSettingHomeFromMap ? 'picking' : homeLocationState ? 'is-set' : 'empty'}">
-        ${isSettingHomeFromMap ? `
-          <div class="home-bar-lead">
-            <div class="home-bar-icon pulse">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 8 12 12 14 14"></polyline></svg>
-            </div>
-            <div class="home-bar-text">
-              <span class="home-bar-label">地図をクリックして指定</span>
-            </div>
-          </div>
-          <button id="btn-sidebar-cancel-pick" class="home-bar-btn" type="button">キャンセル</button>
-        ` : homeLocationState ? `
-          <div class="home-bar-lead" id="btn-sidebar-fly-home" title="自宅へジャンプ">
-            <div class="home-bar-icon">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-              </svg>
-            </div>
-            <div class="home-bar-text">
-              <span class="home-bar-label">${homeLocationState.name || '自宅'}</span>
-              <span class="home-bar-sub">${homeLocationState.lat.toFixed(2)}, ${homeLocationState.lng.toFixed(2)}</span>
-            </div>
-          </div>
-          <div class="home-bar-actions">
-            <button id="btn-sidebar-change-home" class="home-bar-btn" type="button" title="自宅の位置を変更">変更</button>
-            <button id="btn-sidebar-clear-home" class="home-bar-btn-clear" type="button" title="自宅設定を解除">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-          </div>
-        ` : `
-          <div class="home-bar-lead">
-            <div class="home-bar-icon">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-              </svg>
-            </div>
-            <div class="home-bar-text">
-              <span class="home-bar-label">拠点未設定</span>
-            </div>
-          </div>
-          <div class="home-bar-actions">
-            <button id="btn-sidebar-set-home-map" class="home-bar-btn primary" type="button" title="地図をクリックして指定">地図指定</button>
-            <button id="btn-sidebar-set-home-current" class="home-bar-btn" type="button" title="現在地を自宅に設定">現在地</button>
-          </div>
-        `}
-      </div>
-    </div>
-
     <!-- 時期フィルター（セグメントコントロール） -->
     <div class="sidebar-group">
       <div class="sidebar-group-header">
@@ -228,6 +175,59 @@ function renderSidebarUI() {
             #${item.tag} <span class="tag-count">${item.count}</span>
           </button>
         `).join('')}
+      </div>
+    </div>
+
+    <!-- ミニマル拠点・自宅バー (最下部ユーティリティ領域) -->
+    <div class="sidebar-group sidebar-group-home">
+      <div class="sidebar-group-header">
+        <span class="sidebar-group-title">拠点</span>
+      </div>
+      <div class="sidebar-home-bar ${isSettingHomeFromMap ? 'picking' : homeLocationState ? 'is-set' : 'empty'}">
+        ${isSettingHomeFromMap ? `
+          <div class="home-bar-lead">
+            <div class="home-bar-icon pulse">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 8 12 12 14 14"></polyline></svg>
+            </div>
+            <div class="home-bar-text">
+              <span class="home-bar-label">地図をクリックして指定</span>
+            </div>
+          </div>
+          <button id="btn-sidebar-cancel-pick" class="home-bar-btn" type="button">キャンセル</button>
+        ` : homeLocationState ? `
+          <div class="home-bar-lead" id="btn-sidebar-fly-home" title="自宅へジャンプ">
+            <div class="home-bar-icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              </svg>
+            </div>
+            <div class="home-bar-text">
+              <span class="home-bar-label">${homeLocationState.name || '自宅'}</span>
+              <span class="home-bar-sub">${homeLocationState.lat.toFixed(2)}, ${homeLocationState.lng.toFixed(2)}</span>
+            </div>
+          </div>
+          <div class="home-bar-actions">
+            <button id="btn-sidebar-change-home" class="home-bar-btn" type="button" title="自宅の位置を変更">変更</button>
+            <button id="btn-sidebar-clear-home" class="home-bar-btn-clear" type="button" title="自宅設定を解除">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+        ` : `
+          <div class="home-bar-lead">
+            <div class="home-bar-icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              </svg>
+            </div>
+            <div class="home-bar-text">
+              <span class="home-bar-label">拠点未設定</span>
+            </div>
+          </div>
+          <div class="home-bar-actions">
+            <button id="btn-sidebar-set-home-map" class="home-bar-btn primary" type="button" title="地図をクリックして指定">地図指定</button>
+            <button id="btn-sidebar-set-home-current" class="home-bar-btn" type="button" title="現在地を自宅に設定">現在地</button>
+          </div>
+        `}
       </div>
     </div>
   `;

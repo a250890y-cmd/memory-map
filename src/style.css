@@ -336,36 +336,47 @@
   text-decoration: underline;
 }
 
-/* ミニマルな拠点・自宅バー (1行) */
+/* ミニマルな拠点・自宅バー (最下部ユーティリティ領域) */
+.sidebar-group-home {
+  margin-top: 1.5rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-group-home .sidebar-group-header {
+  margin-bottom: 0.45rem;
+}
+
 .sidebar-home-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 7px 11px;
-  background: rgba(255, 255, 255, 0.65);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  border-radius: 12px;
+  padding: 5px 9px;
+  background: rgba(0, 0, 0, 0.025);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  border-radius: 10px;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .sidebar-home-bar:hover {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
 }
 
 .home-bar-lead {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
   cursor: pointer;
 }
 
 .home-bar-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
   background: rgba(0, 0, 0, 0.04);
   color: #64748b;
   display: flex;
@@ -392,9 +403,9 @@
 }
 
 .home-bar-label {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 600;
-  color: #0f172a;
+  color: #1e293b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -402,24 +413,24 @@
 }
 
 .home-bar-sub {
-  font-size: 0.67rem;
+  font-size: 0.65rem;
   color: #94a3b8;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 
 .home-bar-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   flex-shrink: 0;
 }
 
 .home-bar-btn {
-  padding: 3px 8px;
+  padding: 2.5px 7px;
   background: rgba(0, 0, 0, 0.04);
   border: none;
-  border-radius: 6px;
-  font-size: 0.72rem;
+  border-radius: 5px;
+  font-size: 0.68rem;
   font-weight: 600;
   color: #475569;
   cursor: pointer;
@@ -442,14 +453,14 @@
 }
 
 .home-bar-btn-clear {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: 5px;
   color: #94a3b8;
   cursor: pointer;
   transition: all 0.15s ease;
