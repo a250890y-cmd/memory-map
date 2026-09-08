@@ -1183,6 +1183,299 @@
 }
 
 /* --------------------------------------------------------------------------
+   アルバム一覧モーダル (Album List Modal) スタイル
+   -------------------------------------------------------------------------- */
+.album-modal-card {
+  max-width: 880px !important;
+  width: 92% !important;
+  max-height: 85vh !important;
+  background: var(--color-bg-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-card);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.album-modal-icon-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.album-modal-total-badge {
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.album-modal-toolbar {
+  display: flex;
+  gap: 12px;
+  padding: 12px 1.5rem;
+  background: rgba(248, 250, 252, 0.7);
+  border-bottom: 1px solid var(--color-border);
+  align-items: center;
+}
+
+.album-modal-search-box {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.album-modal-search-icon {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.album-modal-search-input {
+  width: 100%;
+  padding: 8px 34px 8px 36px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: #ffffff;
+  font-size: 0.88rem;
+  color: var(--color-text-main);
+  outline: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.album-modal-search-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.album-modal-clear-search {
+  position: absolute;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.06);
+  border: none;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.album-modal-clear-search:hover {
+  background: rgba(0, 0, 0, 0.12);
+  color: #0f172a;
+}
+
+.album-modal-sort-select {
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: #ffffff;
+  color: var(--color-text-main);
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.album-modal-sort-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.album-modal-body {
+  padding: 1.25rem 1.5rem !important;
+  overflow-y: auto;
+  max-height: calc(85vh - 150px);
+}
+
+/* カードグリッド */
+.album-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  padding: 4px 0 16px 0;
+}
+
+.album-grid-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  outline: none;
+}
+
+.album-grid-card:hover,
+.album-grid-card:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+  border-color: rgba(37, 99, 235, 0.35);
+}
+
+.album-grid-card:active {
+  transform: translateY(-1px);
+}
+
+.album-card-thumb-wrapper {
+  width: 100%;
+  height: 145px;
+  position: relative;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+
+.album-card-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s ease;
+  display: block;
+}
+
+.album-grid-card:hover .album-card-cover-img {
+  transform: scale(1.06);
+}
+
+.album-card-thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #cbd5e1;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.album-card-badge-count {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.album-card-info {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: space-between;
+}
+
+.album-card-name {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+  margin: 0 0 6px 0;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.album-card-date-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+}
+
+.album-card-date-row.placeholder {
+  color: #cbd5e1;
+}
+
+.album-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  margin-top: auto;
+}
+
+.album-card-select-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.album-card-arrow {
+  color: var(--color-primary);
+  transition: transform 0.2s ease;
+}
+
+.album-grid-card:hover .album-card-arrow {
+  transform: translateX(3px);
+}
+
+/* 空表示 */
+.album-modal-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3.5rem 1rem;
+}
+
+.album-modal-empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.03);
+  color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.album-modal-empty-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #334155;
+  margin: 0 0 4px 0;
+}
+
+.album-modal-empty-desc {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------
    モバイルファースト レスポンシブ最適化 (@media (max-width: 768px))
    -------------------------------------------------------------------------- */
 
@@ -1448,6 +1741,57 @@
   .form-row {
     flex-direction: column !important;
     gap: 0 !important;
+  }
+
+  /* アルバム一覧モーダル スマホ最適化 */
+  .album-modal-card {
+    max-height: 90vh !important;
+    max-height: 90dvh !important;
+  }
+
+  .album-modal-toolbar {
+    padding: 10px 1.25rem !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .album-modal-search-box {
+    width: 100% !important;
+  }
+
+  .album-modal-sort-box {
+    width: 100% !important;
+  }
+
+  .album-modal-sort-select {
+    width: 100% !important;
+  }
+
+  .album-modal-body {
+    padding: 1rem 1.25rem 2rem 1.25rem !important;
+    max-height: calc(90vh - 160px) !important;
+  }
+
+  .album-modal-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  .album-card-thumb-wrapper {
+    height: 110px !important;
+  }
+
+  .album-card-info {
+    padding: 10px !important;
+  }
+
+  .album-card-name {
+    font-size: 0.88rem !important;
+  }
+
+  .album-card-date-row {
+    font-size: 0.7rem !important;
+    margin-bottom: 8px !important;
   }
 }
 
